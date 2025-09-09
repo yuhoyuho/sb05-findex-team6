@@ -3,6 +3,7 @@ package com.example.findex.domain.Index_Info.entity;
 import com.example.findex.common.base.BaseEntity;
 import com.example.findex.common.base.SourceType;
 import com.example.findex.domain.Auto_Sync.entity.AutoSync;
+import com.example.findex.domain.Index_Info.dto.IndexInfoCreateRequest;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -57,5 +58,15 @@ public class IndexInfo extends BaseEntity {
     ///     == 연관관계 설정 메서드 ==   ///
     public void setAutoSync(AutoSync autoSync) {
         this.autoSync = autoSync;
+    }
+
+    public void update (IndexInfoCreateRequest request) {
+        this.indexClassification = request.indexClassification();
+        this.indexName = request.indexName();
+        this.employedItemsCount = request.employedItemsCount();
+        this.basePointInTime = request.basePointInTime();
+        this.baseIndex = request.baseIndex();
+        this.favorite = request.favorite();
+        this.sourceType = SourceType.사용자;
     }
 }
