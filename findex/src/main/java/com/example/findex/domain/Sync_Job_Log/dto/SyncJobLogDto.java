@@ -9,7 +9,7 @@ public class SyncJobLogDto {
 
     private Long id;
     private String jobType;
-    private int indexInfoId;
+    private Long indexInfoId;
     private String targetDate;
     private String worker;
     private String jobTime;
