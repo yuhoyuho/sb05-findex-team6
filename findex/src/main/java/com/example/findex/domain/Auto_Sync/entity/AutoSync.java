@@ -24,6 +24,7 @@ public class AutoSync extends BaseEntity {
     @Column(name = "enabled", nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
     private boolean enabled;
 
+    // 브랜치 세팅
     ///     == 비즈니스 로직 ==   ///
 
     /**
