@@ -40,7 +40,6 @@ public class SyncJobLogService {
                     .jobType(JobType.INDEX_DATA)
                     .targetDate(today)
                     .worker(worker)
-                    .jobTime(today)
                     .indexInfo(result.indexInfo())
                     .result(result.result())
                     .build();
