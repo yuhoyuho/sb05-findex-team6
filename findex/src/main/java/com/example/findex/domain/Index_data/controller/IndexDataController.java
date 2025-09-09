@@ -57,4 +57,20 @@ public class IndexDataController {
         indexDataService.deleteIndexData(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/export/csv")
+    public ResponseEntity<String> downloadIndexData(
+            @RequestParam(required = false) Long indexInfoId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "baseDate") String sortField,
+            @RequestParam(defaultValue = "desc") String sortDirection) {
+
+        String csvContent = indexDataService.exportToCsv(indexInfoId, startDate, endDate, sortField, sortDirection);
+
+        return ResponseEntity.ok()
+                .header("Content-Type", "text/csv; charset=UTF-8")
+                .header("Content-Disposition", "attachment; filename=index_data.csv")
+                .body("\uFEFF" + csvContent);
+    }
 }

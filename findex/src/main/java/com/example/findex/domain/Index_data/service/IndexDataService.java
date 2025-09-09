@@ -16,6 +16,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Base64;
 import java.util.List;
@@ -122,5 +123,42 @@ public class IndexDataService {
         long totalElements = indexDataRepository.countDataWithCondition(indexInfoId, startDate, endDate);
 
         return new CursorPageResponseIndexDataDto(content, nextCursor, nextIdAfter, size, totalElements, hasNext);
+    }
+
+    public String exportToCsv(Long indexInfoId, LocalDate startDate, LocalDate endDate,
+                              String sortField, String sortDirection) {
+        List<IndexData> dataList = indexDataRepository.findDataWithCondition(
+                indexInfoId, startDate, endDate, sortField, sortDirection, null, Pageable.ofSize(Integer.MAX_VALUE));
+
+        StringBuilder csv = new StringBuilder();
+        csv.append("지수분류,지수명,기준일자,소스타입,시가,종가,고가,저가,대비,등락률,거래량,거래대금,상장시가총액\n");
+
+        for (IndexData data : dataList) {
+            csv.append(String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                    data.getIndexInfo().getIndexClassification(),
+                    data.getIndexInfo().getIndexName(),
+                    data.getBaseDate(),
+                    data.getSourceType(),
+                    formatNumber(data.getMarketPrice()),
+                    formatNumber(data.getClosingPrice()),
+                    formatNumber(data.getHighPrice()),
+                    formatNumber(data.getLowPrice()),
+                    formatNumber(data.getVersus()),
+                    formatNumber(data.getFluctuationRate()),
+                    formatLong(data.getTradingQuantity()),
+                    formatLong(data.getTradingPrice()),
+                    formatLong(data.getMarketTotalAmount())
+            ));
+        }
+
+        return csv.toString();
+    }
+
+    private String formatNumber(BigDecimal value) {
+        return value != null ? String.format("%.2f", value) : "0.00";
+    }
+
+    private String formatLong(Long value) {
+        return value != null ? String.valueOf(value) : "0";
     }
 }
