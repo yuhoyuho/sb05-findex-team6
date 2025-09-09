@@ -5,9 +5,8 @@ import lombok.*;
 import java.util.List;
 
 @Data
-@Getter
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@NoArgsConstructor
 public class CursorPageResponseIndexDataDto {
     private List<IndexDataDto> content;
     private String nextCursor;

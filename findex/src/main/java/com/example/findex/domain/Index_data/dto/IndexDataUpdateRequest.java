@@ -5,9 +5,8 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Data
-@Getter
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@NoArgsConstructor
 public class IndexDataUpdateRequest {
     private BigDecimal marketPrice;
     private BigDecimal closingPrice;

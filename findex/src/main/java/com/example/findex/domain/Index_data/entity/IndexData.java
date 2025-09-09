@@ -5,15 +5,17 @@ import com.example.findex.common.base.SourceType;
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @Table(
         name = "index_data",
         uniqueConstraints = {

@@ -6,9 +6,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
-@Getter
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@NoArgsConstructor
 public class IndexDataCreateRequest {
     private Long indexInfoId;
     private LocalDate baseDate;
