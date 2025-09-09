@@ -74,7 +74,7 @@ public class IndexSyncService {
                 .employedItemsCount(item.getEmployedItemsCount())
                 .basePointInTime(parseLocalDate(item.getBasePointTime())) // String -> LocalDate
                 .baseIndex(parseBigDecimal(item.getBaseIndex()))       // String -> BigDecimal
-                .sourceType(SourceType.OpenAPI) // API로부터 생성
+                .sourceType(SourceType.OPEN_API) // API로부터 생성
                 .favorite(false) // 기본값
                 .build();
     }
@@ -84,7 +84,7 @@ public class IndexSyncService {
         return IndexData.builder()
                 .indexInfo(indexInfo) // 연관관계 설정
                 .baseDate(parseLocalDate(item.getBaseDate()))
-                .sourceType(SourceType.OpenAPI)
+                .sourceType(SourceType.OPEN_API)
                 .marketPrice(parseBigDecimal(item.getMarketPrice()))
                 .closingPrice(parseBigDecimal(item.getClosingPrice()))
                 .highPrice(parseBigDecimal(item.getHighPrice()))
