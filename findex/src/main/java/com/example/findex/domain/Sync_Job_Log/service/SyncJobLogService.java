@@ -40,6 +40,10 @@ public class SyncJobLogService {
                     .jobType(JobType.INDEX_DATA)
                     .targetDate(today)
                     .worker(worker)
+<<<<<<< HEAD
+=======
+                    .jobTime(today)
+>>>>>>> fc1c724 (feat: 지수 정보 연동 API)
                     .indexInfo(result.indexInfo())
                     .result(result.result())
                     .build();
