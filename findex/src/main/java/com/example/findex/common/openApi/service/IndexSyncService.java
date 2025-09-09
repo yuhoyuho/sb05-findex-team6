@@ -6,8 +6,6 @@ import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import com.example.findex.domain.Index_Info.repository.IndexInfoRepository;
 import com.example.findex.domain.Index_data.entity.IndexData;
 import com.example.findex.domain.Index_data.repository.IndexDataRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,43 +23,48 @@ import java.util.List;
 public class IndexSyncService {
 
     private final OpenApiService openApiService;
-    private final ObjectMapper objectMapper;
     private final IndexInfoRepository indexInfoRepository;
     private final IndexDataRepository indexDataRepository;
 
     @Transactional
     public void syncDailyData(LocalDate date) {
-        // OpenApiService 호출
-        String json = openApiService.fetchIndexDataAsString(date);
-        if(json == null) {
-            log.warn("API에서 {} 날짜의 데이터를 가져오지 못했습니다.", date);
+        // 💡 1. OpenApiService 호출 방식 변경
+        // String이 아닌 DTO 객체를 직접 받습니다.
+        IndexApiResponseDto responseDto = openApiService.fetchStockData(date);
+
+        // API 응답이 null이거나, 응답 Body가 없거나, Item 목록이 없는 경우를 모두 체크
+        if (responseDto == null || responseDto.getResponse() == null ||
+                responseDto.getResponse().getBody() == null || responseDto.getResponse().getBody().getItems() == null) {
+            log.warn("API에서 {} 날짜의 데이터를 가져오지 못했거나 응답 구조가 비어있습니다.", date);
             return;
         }
 
-        try {
-            // 받아온 JSON을 DTO로 파싱
-            IndexApiResponseDto responseDto = objectMapper.readValue(json, IndexApiResponseDto.class);
-            List<IndexApiResponseDto.Item> items = responseDto.getResponse().getBody().getItems().getItem();
+        // 💡 2. JSON 파싱 로직 제거
+        // 이미 DTO로 변환되었으므로 ObjectMapper를 사용한 파싱 과정이 필요 없습니다.
+        List<IndexApiResponseDto.Item> items = responseDto.getResponse().getBody().getItems().getItem();
 
-            // 각 데이터를 순회하며 DB에 저장
-            for (IndexApiResponseDto.Item item : items) {
-                // 지수 정보(IndexInfo)를 DB에서 찾거나, 없으면 새로 생성하여 저장
-                IndexInfo indexInfo = indexInfoRepository
-                        .findByIndexNameAndIndexClassification(item.getIndexName(), item.getIndexClassification())
-                        .orElseGet(() -> {
-                            IndexInfo newInfo = createIndexInfoFromDto(item); // DTO -> Entity
-                            return indexInfoRepository.save(newInfo);
-                        });
-
-                // 일별 데이터(IndexData) 엔티티를 생성하고 저장
-                IndexData indexData = createIndexDataFromDto(item, indexInfo); // DTO -> Entity
-                indexDataRepository.save(indexData);
-            }
-            log.info("{} 날짜의 지수 데이터 동기화가 성공적으로 완료되었습니다.", date);
-
-        } catch (JsonProcessingException e) {
-            log.error("{} 날짜의 지수 데이터 파싱 중 오류가 발생했습니다. 응답 내용: {}", date, json, e);
+        if (items != null && !items.isEmpty()) {
+            log.info(">>>>> DTO 매핑 결과 샘플: {}", items.get(0));
         }
+
+        if (items == null || items.isEmpty()) {
+            log.info("{} 날짜에 동기화할 지수 데이터가 없습니다.", date);
+            return;
+        }
+
+        // 각 데이터를 순회하며 DB에 저장 (이 로직은 그대로 유지됩니다)
+        for (IndexApiResponseDto.Item item : items) {
+            IndexInfo indexInfo = indexInfoRepository
+                    .findByIndexNameAndIndexClassification(item.getIndexName(), item.getIndexClassification())
+                    .orElseGet(() -> {
+                        IndexInfo newInfo = createIndexInfoFromDto(item);
+                        return indexInfoRepository.save(newInfo);
+                    });
+
+            IndexData indexData = createIndexDataFromDto(item, indexInfo);
+            indexDataRepository.save(indexData);
+        }
+        log.info("{} 날짜의 지수 데이터 동기화가 성공적으로 완료되었습니다. ({}건 처리)", date, items.size());
     }
 
     /// 이 아래에서 본인이 맡은 부분 파싱하는 로직 작성하면 될 것 같습니다.
