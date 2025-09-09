@@ -2,6 +2,8 @@ package com.example.findex.common.openApi.service;
 
 import com.example.findex.common.base.SourceType;
 import com.example.findex.common.openApi.dto.IndexApiResponseDto;
+import com.example.findex.domain.Auto_Sync.entity.AutoSync;
+import com.example.findex.domain.Auto_Sync.repository.AutoSyncRepository;
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import com.example.findex.domain.Index_Info.repository.IndexInfoRepository;
 import com.example.findex.domain.Index_data.entity.IndexData;
@@ -25,6 +27,7 @@ public class IndexSyncService {
     private final OpenApiService openApiService;
     private final IndexInfoRepository indexInfoRepository;
     private final IndexDataRepository indexDataRepository;
+    private final AutoSyncRepository autoSyncRepository;
 
     @Transactional
     public void syncDailyData(LocalDate date) {
@@ -58,13 +61,26 @@ public class IndexSyncService {
                     .findByIndexNameAndIndexClassification(item.getIndexName(), item.getIndexClassification())
                     .orElseGet(() -> {
                         IndexInfo newInfo = createIndexInfoFromDto(item);
-                        return indexInfoRepository.save(newInfo);
+                        indexInfoRepository.save(newInfo);
+                        createAutoSyncIfAbsent(newInfo);
+                        return newInfo;
                     });
 
             IndexData indexData = createIndexDataFromDto(item, indexInfo);
             indexDataRepository.save(indexData);
         }
         log.info("{} 날짜의 지수 데이터 동기화가 성공적으로 완료되었습니다. ({}건 처리)", date, items.size());
+    }
+
+    private void createAutoSyncIfAbsent(IndexInfo indexInfo) {
+        if(autoSyncRepository.findByIndexInfo_Id(indexInfo.getId()).isPresent()) {
+            return;
+        }
+        AutoSync autoSync = AutoSync.builder()
+                .indexInfo(indexInfo)
+                .enabled(false)
+                .build();
+        autoSyncRepository.save(autoSync);
     }
 
     /// 이 아래에서 본인이 맡은 부분 파싱하는 로직 작성하면 될 것 같습니다.
@@ -77,7 +93,7 @@ public class IndexSyncService {
                 .employedItemsCount(item.getEmployedItemsCount())
                 .basePointInTime(parseLocalDate(item.getBasePointTime())) // String -> LocalDate
                 .baseIndex(parseBigDecimal(item.getBaseIndex()))       // String -> BigDecimal
-                .sourceType(SourceType.OpenAPI) // API로부터 생성
+                .sourceType(SourceType.OPEN_API) // API로부터 생성
                 .favorite(false) // 기본값
                 .build();
     }
@@ -87,7 +103,7 @@ public class IndexSyncService {
         return IndexData.builder()
                 .indexInfo(indexInfo) // 연관관계 설정
                 .baseDate(parseLocalDate(item.getBaseDate()))
-                .sourceType(SourceType.OpenAPI)
+                .sourceType(SourceType.OPEN_API)
                 .marketPrice(parseBigDecimal(item.getMarketPrice()))
                 .closingPrice(parseBigDecimal(item.getClosingPrice()))
                 .highPrice(parseBigDecimal(item.getHighPrice()))

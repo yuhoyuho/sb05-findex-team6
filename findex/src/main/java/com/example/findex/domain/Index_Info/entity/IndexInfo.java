@@ -5,6 +5,7 @@ import com.example.findex.common.base.SourceType;
 import com.example.findex.domain.Auto_Sync.entity.AutoSync;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,7 +14,7 @@ import java.time.LocalDate;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @Table(
         name = "index_info",
         uniqueConstraints = {

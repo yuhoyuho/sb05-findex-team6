@@ -6,6 +6,7 @@ import com.example.findex.common.base.JobType;
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 
@@ -13,8 +14,8 @@ import java.time.LocalDate;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Builder
-@Table(name = "sync_job")
+@SuperBuilder
+@Table(name = "integration_job")
 public class SyncJobLog extends BaseEntity {
 
     @Id
