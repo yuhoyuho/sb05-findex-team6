@@ -3,6 +3,7 @@ package com.example.findex.domain.Index_Info.controller;
 import com.example.findex.domain.Index_Info.dto.IndexInfoCreateRequest;
 import com.example.findex.domain.Index_Info.dto.IndexInfoDto;
 import com.example.findex.domain.Index_Info.dto.IndexInfoSummaryDto;
+import com.example.findex.domain.Index_Info.dto.IndexInfoUpdateDto;
 import com.example.findex.domain.Index_Info.service.IndexInfoService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -44,7 +45,7 @@ public class IndexInfoController {
 
   @PatchMapping("/{id}")
   public ResponseEntity<IndexInfoDto> update(@PathVariable("id") Long id,
-      @Valid @RequestBody IndexInfoCreateRequest request) {
+      @Valid @RequestBody IndexInfoUpdateDto request) {
     return ResponseEntity.ok(service.update(id, request));
   }
 

@@ -4,6 +4,7 @@ import com.example.findex.common.base.SourceType;
 import com.example.findex.domain.Index_Info.dto.IndexInfoCreateRequest;
 import com.example.findex.domain.Index_Info.dto.IndexInfoDto;
 import com.example.findex.domain.Index_Info.dto.IndexInfoSummaryDto;
+import com.example.findex.domain.Index_Info.dto.IndexInfoUpdateDto;
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import com.example.findex.domain.Index_Info.repository.IndexInfoRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -47,11 +48,17 @@ public class IndexInfoService {
   }
 
   // 수정
-  public IndexInfoDto update(Long id, IndexInfoCreateRequest request) {
+  public IndexInfoDto update(Long id, IndexInfoUpdateDto request) {
     IndexInfo entity = repository.findById(id)
         .orElseThrow(() -> new EntityNotFoundException("지수 정보를 찾을 수 없습니다. id=" + id));
 
-    entity.update(request);
+    if (request.indexClassification() != null)entity.setIndexClassification(request.indexClassification());
+    if (request.indexName() != null)entity.setIndexName(request.indexName());
+    if (request.employedItemsCount() != null)entity.setEmployedItemsCount(request.employedItemsCount());
+    if (request.basePointInTime() != null)entity.setBasePointInTime(request.basePointInTime());
+    if (request.baseIndex() != null)entity.setBaseIndex(request.baseIndex());
+    if (request.favorite() != null)entity.setFavorite(request.favorite());
+
     return IndexInfoDto.fromEntity(repository.save(entity));
   }
 
