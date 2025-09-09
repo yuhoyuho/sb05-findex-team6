@@ -9,12 +9,13 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @Table(
         name = "index_info",
         uniqueConstraints = {
