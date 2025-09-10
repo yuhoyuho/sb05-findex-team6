@@ -7,12 +7,5 @@ public record IndexInfoSummaryDto(
     String indexClassification,
     String indexName
 ) {
-  public static IndexInfoSummaryDto fromEntity(IndexInfo entity) {
-    return  new IndexInfoSummaryDto(
-        entity.getId(),
-        entity.getIndexClassification(),
-        entity.getIndexName()
-    );
-  }
 
 }
