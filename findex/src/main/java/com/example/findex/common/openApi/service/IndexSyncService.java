@@ -33,7 +33,7 @@ public class IndexSyncService {
 
     @Transactional
     public void syncDailyData(LocalDate date) {
-        // 💡 1. OpenApiService 호출 방식 변경
+        // OpenApiService 호출 방식 변경
         // String이 아닌 DTO 객체를 직접 받습니다.
         IndexApiResponseDto responseDto = openApiService.fetchStockData(date);
 
@@ -44,7 +44,7 @@ public class IndexSyncService {
             return;
         }
 
-        // 💡 2. JSON 파싱 로직 제거
+        // JSON 파싱 로직 제거
         // 이미 DTO로 변환되었으므로 ObjectMapper를 사용한 파싱 과정이 필요 없습니다.
         List<IndexApiResponseDto.Item> items = responseDto.getResponse().getBody().getItems().getItem();
 
@@ -73,47 +73,6 @@ public class IndexSyncService {
     }
 
     /// 이 아래에서 본인이 맡은 부분 파싱하는 로직 작성하면 될 것 같습니다.
-
-    /**
-     * SyncJobLogService에서 사용하는 메서드
-     * 데이터 동기화 수행, 각 데이터 처리 결과를 List로 반환
-     */
-//    @Transactional
-//    public List<SyncResult> syncDailyDataAndWithResults(LocalDate date) {
-//        IndexApiResponseDto response = openApiService.fetchStockData(date);
-//        List<SyncResult> result = new ArrayList<>();
-//
-//        if(response == null || response.getResponse().getBody().getItems() == null || response.getResponse().getBody().getItems().getItem() == null) {
-//            log.warn("API에서 {} 날짜의 데이터를 가져오지 못했거나 응답 구조가 비어있습니다.", date);
-//            return result;
-//        }
-//
-//        List<IndexApiResponseDto.Item> items = response.getResponse().getBody().getItems().getItem();
-//        if(items.isEmpty()) {
-//            log.info("{} 날짜에 동기화할 지수 데이터가 없습니다.", date);
-//            return result;
-//        }
-//
-//        for (IndexApiResponseDto.Item item : items) {
-//            IndexInfo indexInfo = null;
-//
-//            try {
-//                indexInfo = findOrCreateIndexInfo(item);
-//
-//                IndexData indexData = createIndexDataFromDto(item, indexInfo);
-//                indexDataRepository.save(indexData);
-//
-//                result.add(new SyncResult(JobResult.SUCCESS, indexInfo, "데이터 동기화 성공"));
-//
-//            } catch(Exception e) {
-//                log.error("지수 '{}' 데이터 동기화 중 예외 발생", item.getIndexName(), e);
-//                result.add(new SyncResult(JobResult.FAILURE, indexInfo, e.getMessage()));
-//            }
-//        }
-//
-//        log.info("{} 날짜의 지수 데이터 동기화가 완료되었습니다. (Total : {})", date, items.size());
-//        return result;
-//    }
 
     /**
      * 지정된 날짜 범위와 id에 맞는 지수 데이터 연동 메서드
