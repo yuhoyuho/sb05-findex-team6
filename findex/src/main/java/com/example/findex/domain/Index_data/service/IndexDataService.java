@@ -67,68 +67,82 @@ public class IndexDataService {
             Long indexInfoId, LocalDate startDate, LocalDate endDate,
             Long idAfter, String cursor, String sortField, String sortDirection, Integer size) {
 
+        String validSortField = getValidSortField(sortField);
+        String validSortDirection = getValidSortDirection(sortDirection);
 
-        if (cursor != null) {
-            try {
-                String decodedCursor = new String(Base64.getDecoder().decode(cursor));
-                // 예: {"baseDate":"2024-06-01"}, {"marketPrice":123.45}, {"id":100}
-                if ("baseDate".equals(sortField)) {
-                    String dateStr = decodedCursor.replaceAll("[^0-9\\-]", "");
-                    cursor = dateStr; // "2024-06-01"
-                } else if ("marketPrice".equals(sortField) || "closingPrice".equals(sortField)) {
-                    String numStr = decodedCursor.replaceAll("[^0-9.]", "");
-                    cursor = numStr; // "123.45"
-                } else {
-                    String idStr = decodedCursor.replaceAll("[^0-9]", "");
-                    cursor = idStr; // "100"
-                }
-            } catch (Exception e) {
-                // 잘못된 커서는 무시
-            }
-        }
-        if (cursor == null && idAfter != null) {
-            cursor = idAfter.toString();
-        }
+        List<IndexData> dataList = indexDataRepository.findDataWithDynamicSort(
+                indexInfoId, startDate, endDate,
+                validSortField, validSortDirection, cursor, idAfter, size);
 
-        Sort.Direction direction = "desc".equalsIgnoreCase(sortDirection) ?
-                Sort.Direction.DESC : Sort.Direction.ASC;
-        Sort sort = Sort.by(direction, sortField).and(Sort.by(Sort.Direction.DESC, "id"));
-        Pageable pageable = PageRequest.of(0, size + 1, sort);
-
-        // 데이터 조회
-        List<IndexData> dataList = indexDataRepository.findDataWithCondition(
-                indexInfoId, startDate, endDate, sortField, sortDirection, cursor, pageable);
-
-        // hasNext 확인
         boolean hasNext = dataList.size() > size;
         if (hasNext) {
             dataList = dataList.subList(0, size);
         }
 
-        // MapStruct로 DTO 변환
         List<IndexDataDto> content = indexDataMapper.toDtoList(dataList);
 
-        // 다음 커서 생성
         String nextCursor = null;
         Long nextIdAfter = null;
         if (hasNext && !dataList.isEmpty()) {
-            Long lastId = dataList.get(dataList.size() - 1).getId();
-            nextIdAfter = lastId;
-            nextCursor = Base64.getEncoder().encodeToString(
-                    String.format("{\"id\":%d}", lastId).getBytes()
-            );
+            IndexData lastEntity = dataList.get(dataList.size() - 1);
+            nextIdAfter = lastEntity.getId();
+            nextCursor = generateNextCursor(lastEntity, validSortField);
         }
 
-        // 전체 개수 조회
         long totalElements = indexDataRepository.countDataWithCondition(indexInfoId, startDate, endDate);
 
         return new CursorPageResponseIndexDataDto(content, nextCursor, nextIdAfter, size, totalElements, hasNext);
     }
 
+    private String getValidSortField(String sortField) {
+        if (sortField == null || sortField.trim().isEmpty()) {
+            return "baseDate";
+        }
+
+        return switch (sortField) {
+            case "baseDate", "closingPrice", "marketPrice", "highPrice", "lowPrice",
+                 "tradingQuantity", "tradingPrice", "marketTotalAmount" -> sortField;
+            default -> "baseDate";
+        };
+    }
+
+    private String getValidSortDirection(String sortDirection) {
+        return "desc".equalsIgnoreCase(sortDirection) ? "desc" : "asc";
+    }
+
+    private String generateNextCursor(IndexData entity, String sortField) {
+        String validatedField = getValidSortField(sortField);
+        Object fieldValue = extractFieldValue(entity, validatedField);
+
+        String json = String.format("{\"%s\":\"%s\",\"id\":%d}",
+                validatedField, fieldValue, entity.getId());
+        return Base64.getEncoder().encodeToString(json.getBytes());
+    }
+
+    private Object extractFieldValue(IndexData entity, String sortField) {
+        return switch (sortField) {
+            case "baseDate" -> entity.getBaseDate();
+            case "closingPrice" -> entity.getClosingPrice();
+            case "marketPrice" -> entity.getMarketPrice();
+            case "highPrice" -> entity.getHighPrice();
+            case "lowPrice" -> entity.getLowPrice();
+            case "tradingQuantity" -> entity.getTradingQuantity();
+            case "tradingPrice" -> entity.getTradingPrice();
+            case "marketTotalAmount" -> entity.getMarketTotalAmount();
+            default -> entity.getId();
+        };
+    }
+
     public String exportToCsv(Long indexInfoId, LocalDate startDate, LocalDate endDate,
                               String sortField, String sortDirection) {
-        List<IndexData> dataList = indexDataRepository.findDataWithCondition(
-                indexInfoId, startDate, endDate, sortField, sortDirection, null, Pageable.ofSize(Integer.MAX_VALUE));
+
+        String validSortField = getValidSortField(sortField);
+        String validSortDirection = getValidSortDirection(sortDirection);
+
+        // QueryDSL로 모든 데이터 조회 (cursor 없이, 무제한 조회)
+        List<IndexData> dataList = indexDataRepository.findDataWithDynamicSort(
+                indexInfoId, startDate, endDate,
+                validSortField, validSortDirection, null, null, Integer.MAX_VALUE-1);
 
         StringBuilder csv = new StringBuilder();
         csv.append("지수분류,지수명,기준일자,소스타입,시가,종가,고가,저가,대비,등락률,거래량,거래대금,상장시가총액\n");
