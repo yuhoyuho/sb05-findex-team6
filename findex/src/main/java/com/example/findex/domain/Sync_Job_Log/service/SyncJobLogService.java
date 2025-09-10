@@ -5,7 +5,6 @@ import com.example.findex.common.openApi.service.IndexSyncService;
 import com.example.findex.domain.Sync_Job_Log.dto.SyncResult;
 import com.example.findex.domain.Sync_Job_Log.entity.SyncJobLog;
 import com.example.findex.domain.Sync_Job_Log.repository.SyncJobLogRepository;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,10 +39,7 @@ public class SyncJobLogService {
                     .jobType(JobType.INDEX_DATA)
                     .targetDate(today)
                     .worker(worker)
-<<<<<<< HEAD
-=======
                     .jobTime(today)
->>>>>>> fc1c724 (feat: 지수 정보 연동 API)
                     .indexInfo(result.indexInfo())
                     .result(result.result())
                     .build();

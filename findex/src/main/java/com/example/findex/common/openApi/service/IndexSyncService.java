@@ -66,7 +66,6 @@ public class IndexSyncService {
 
             IndexData indexData = createIndexDataFromDto(item, indexInfo);
             indexDataRepository.save(indexData);
-            syncDailyDataAndWithResults(date);
         }
         log.info("{} 날짜의 지수 데이터 동기화가 성공적으로 완료되었습니다. ({}건 처리)", date, items.size());
     }
