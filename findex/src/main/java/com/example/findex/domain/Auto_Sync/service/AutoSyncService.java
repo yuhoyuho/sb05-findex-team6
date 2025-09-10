@@ -24,24 +24,31 @@ public class AutoSyncService {
 
     @Transactional(readOnly = true)
     public CursorPageResponseAutoSyncConfigDto<AutoSyncConfigDto> findPage(
-            Long id, Boolean enabled, String cursor, int size) {
-
+            Long indexInfoId, Boolean enabled, String cursor, Long idAfter, String sortField, String sortDirection, int size) {
         Long cursorIndexId = null;
         if(cursor != null && !cursor.isEmpty()) {
             try {
                 cursorIndexId = Long.parseLong(cursor);
+
+                // 커서 유효성 검사: 해당 커서가 현재 필터 조건에 맞는지 확인
+                if (!isCursorValidForFilter(cursorIndexId, indexInfoId, enabled, sortField)) {
+                    System.out.println("Invalid cursor for current filter conditions, resetting to first page");
+                    cursorIndexId = null; // 첫 페이지로 리셋
+                }
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("Invalid cursor format: " + cursor);
             }
+        } else if(idAfter != null) {
+            cursorIndexId = idAfter;
         }
 
         Pageable pageable = PageRequest.of(0, size + 1);
 
         Slice<AutoSync> slice;
         if(cursorIndexId == null) {
-            slice = autoSyncRepository.findFirstPageByConditions(id, enabled, pageable);
+            slice = autoSyncRepository.findFirstPageByConditions(indexInfoId, enabled, sortField, pageable);
         } else {
-            slice = autoSyncRepository.findAfterCursorByConditions(id, enabled, cursorIndexId, pageable);
+            slice = autoSyncRepository.findAfterCursorByConditions(indexInfoId, enabled, cursorIndexId, sortField, pageable);
         }
 
         List<AutoSync> autoSyncs = slice.getContent();
@@ -73,6 +80,11 @@ public class AutoSyncService {
                 (long) content.size(),
                 hasNext
         );
+    }
+
+    private boolean isCursorValidForFilter(Long cursorId, Long indexInfoId, Boolean enabled, String sortField) {
+        // 해당 커서 ID가 현재 필터 조건에 존재하는지 확인
+        return autoSyncRepository.existsByCursorAndFilter(cursorId, indexInfoId, enabled, sortField);
     }
 
     @Transactional
