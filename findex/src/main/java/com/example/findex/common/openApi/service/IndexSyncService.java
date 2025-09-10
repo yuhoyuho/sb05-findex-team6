@@ -18,7 +18,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -74,42 +76,103 @@ public class IndexSyncService {
 
     /**
      * SyncJobLogService에서 사용하는 메서드
-     * 데이터 동기화 수행, 각 데이터 처리 결과를 List로 반
+     * 데이터 동기화 수행, 각 데이터 처리 결과를 List로 반환
+     */
+//    @Transactional
+//    public List<SyncResult> syncDailyDataAndWithResults(LocalDate date) {
+//        IndexApiResponseDto response = openApiService.fetchStockData(date);
+//        List<SyncResult> result = new ArrayList<>();
+//
+//        if(response == null || response.getResponse().getBody().getItems() == null || response.getResponse().getBody().getItems().getItem() == null) {
+//            log.warn("API에서 {} 날짜의 데이터를 가져오지 못했거나 응답 구조가 비어있습니다.", date);
+//            return result;
+//        }
+//
+//        List<IndexApiResponseDto.Item> items = response.getResponse().getBody().getItems().getItem();
+//        if(items.isEmpty()) {
+//            log.info("{} 날짜에 동기화할 지수 데이터가 없습니다.", date);
+//            return result;
+//        }
+//
+//        for (IndexApiResponseDto.Item item : items) {
+//            IndexInfo indexInfo = null;
+//
+//            try {
+//                indexInfo = findOrCreateIndexInfo(item);
+//
+//                IndexData indexData = createIndexDataFromDto(item, indexInfo);
+//                indexDataRepository.save(indexData);
+//
+//                result.add(new SyncResult(JobResult.SUCCESS, indexInfo, "데이터 동기화 성공"));
+//
+//            } catch(Exception e) {
+//                log.error("지수 '{}' 데이터 동기화 중 예외 발생", item.getIndexName(), e);
+//                result.add(new SyncResult(JobResult.FAILURE, indexInfo, e.getMessage()));
+//            }
+//        }
+//
+//        log.info("{} 날짜의 지수 데이터 동기화가 완료되었습니다. (Total : {})", date, items.size());
+//        return result;
+//    }
+
+    /**
+     * 지정된 날짜 범위와 id에 맞는 지수 데이터 연동 메서드
      */
     @Transactional
-    public List<SyncResult> syncDailyDataAndWithResults(LocalDate date) {
-        IndexApiResponseDto response = openApiService.fetchStockData(date);
+    public List<SyncResult> syncIndexDataByFilter(LocalDate start, LocalDate end, List<Long> indexIds) {
         List<SyncResult> result = new ArrayList<>();
+        Set<Long> ids = (indexIds == null || indexIds.isEmpty()) ? null : new HashSet<>(indexIds);
 
-        if(response == null || response.getResponse().getBody().getItems() == null || response.getResponse().getBody().getItems().getItem() == null) {
-            log.warn("API에서 {} 날짜의 데이터를 가져오지 못했거나 응답 구조가 비어있습니다.", date);
-            return result;
-        }
+        // 날짜 범위만큼 Loop
+        for(LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+            IndexApiResponseDto response = openApiService.fetchStockData(date);
 
-        List<IndexApiResponseDto.Item> items = response.getResponse().getBody().getItems().getItem();
-        if(items.isEmpty()) {
-            log.info("{} 날짜에 동기화할 지수 데이터가 없습니다.", date);
-            return result;
-        }
+            if(response == null || response.getResponse().getBody().getItems() == null || response.getResponse().getBody().getItems().getItem() == null) {
+                log.warn("{} 날짜의 API 데이터를 가져오지 못했습니다.", date);
+                continue; // 다음 날짜로 넘어감
+            }
 
-        for (IndexApiResponseDto.Item item : items) {
-            IndexInfo indexInfo = null;
+            List<IndexApiResponseDto.Item> items = response.getResponse().getBody().getItems().getItem();
 
-            try {
-                indexInfo = findOrCreateIndexInfo(item);
+            // 지수 데이터 필터링 (ids 기반)
+            List<IndexApiResponseDto.Item> filteredItems = items.stream()
+                    .filter(item -> {
+                        if(ids == null) {
+                            return true; // id를 정하지 않았다면 모든 아이템 반환
+                        }
 
-                IndexData indexData = createIndexDataFromDto(item, indexInfo);
-                indexDataRepository.save(indexData);
+                        return indexInfoRepository
+                                .findByIndexNameAndIndexClassification(item.getIndexName(), item.getIndexClassification())
+                                .map(IndexInfo::getId)
+                                .map(ids::contains)
+                                .orElse(false);
+                    })
+                    .toList();
 
-                result.add(new SyncResult(JobResult.SUCCESS, indexInfo, "데이터 동기화 성공"));
+            // db에 저장하고 로그 기록
+            for(IndexApiResponseDto.Item item : filteredItems) {
 
-            } catch(Exception e) {
-                log.error("지수 '{}' 데이터 동기화 중 예외 발생", item.getIndexName(), e);
-                result.add(new SyncResult(JobResult.FAILURE, indexInfo, e.getMessage()));
+                IndexInfo indexInfo = null;
+                LocalDate actualDate = parseLocalDate(item.getBaseDate());
+
+                try {
+
+                    indexInfo = findOrCreateIndexInfo(item);
+
+                    IndexData indexData = createIndexDataFromDto(item, indexInfo);
+                    indexDataRepository.save(indexData);
+
+                    result.add(new SyncResult(JobResult.SUCCESS, indexInfo, "데이터 동기화 성공", actualDate));
+
+                } catch(Exception e) {
+
+                    log.error("지수 '{}' 데이터 동기화 중 예외 발생", item.getIndexName(), e);
+                    result.add(new SyncResult(JobResult.FAILURE, indexInfo, e.getMessage(), actualDate));
+                }
             }
         }
 
-        log.info("{} 날짜의 지수 데이터 동기화가 완료되었습니다. (Total : {})", date, items.size());
+        log.info("필터링된 지수 데이터 동기화가 완료되었습니다. (총 {}일, {}건 처리)", start.until(end).getDays() + 1, result.size());
         return result;
     }
 

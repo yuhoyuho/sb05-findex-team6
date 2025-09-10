@@ -1,5 +1,6 @@
 package com.example.findex.domain.Sync_Job_Log.controller;
 
+import com.example.findex.domain.Sync_Job_Log.dto.IndexDataSyncRequest;
 import com.example.findex.domain.Sync_Job_Log.dto.SyncJobLogDto;
 import com.example.findex.domain.Sync_Job_Log.entity.SyncJobLog;
 import com.example.findex.domain.Sync_Job_Log.mapper.SyncJobLogMapper;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,7 +27,7 @@ public class SyncJobLogController {
     /**
      * HTTP : POST
      * EndPoint : /api/sync-jobs/index-infos
-     * 지수 정보 연동
+     * 지수 정보 연동 (해당 날짜의 지수 정보/데이터 모두 연동)
      */
     @PostMapping("/index-infos")
     public ResponseEntity<List<SyncJobLogDto>> syncIndexInfos(HttpServletRequest request) {
@@ -37,6 +39,25 @@ public class SyncJobLogController {
         List<SyncJobLog> jobLogs = syncJobLogService.syncAndLogLatestIndexData(clientIp);
 
         // entity -> dto
+        List<SyncJobLogDto> response = syncJobLogMapper.toDtoList(jobLogs);
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+    }
+
+    /**
+     * HTTP : POST
+     * EndPoint : /api/sync-jobs/index-data
+     * 지수 데이터 연동 (조건에 맞는 지수 데이터만 연동)
+     */
+    @PostMapping("/index-data")
+    public ResponseEntity<List<SyncJobLogDto>> syncIndexData(
+            @RequestBody IndexDataSyncRequest request,
+            HttpServletRequest httpServletRequest) {
+
+        String clientIp = getClientIp(httpServletRequest);
+
+        List<SyncJobLog> jobLogs = syncJobLogService.syncSpecificIndexDataAndLog(request, clientIp);
+
         List<SyncJobLogDto> response = syncJobLogMapper.toDtoList(jobLogs);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
