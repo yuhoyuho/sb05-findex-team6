@@ -25,7 +25,7 @@ public class AutoSync extends BaseEntity {
     private IndexInfo indexInfo;
 
     @Column(nullable = false)
-    private boolean enabled = false;
+    private boolean enabled;
 
     public void updateEnabled(boolean enabled) {
         this.enabled = enabled;

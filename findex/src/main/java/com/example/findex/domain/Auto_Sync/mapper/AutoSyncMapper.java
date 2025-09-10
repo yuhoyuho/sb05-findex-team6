@@ -1,7 +1,7 @@
-package com.example.findex.mapper;
+package com.example.findex.domain.Auto_Sync.mapper;
 
 import com.example.findex.domain.Auto_Sync.entity.AutoSync;
-import com.example.findex.dto.AutoSyncConfigDto;
+import com.example.findex.domain.Auto_Sync.dto.AutoSyncConfigDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
