@@ -5,7 +5,6 @@ import com.example.findex.domain.Index_Info.dto.IndexInfoDto;
 import com.example.findex.domain.Index_Info.dto.IndexInfoSummaryDto;
 import com.example.findex.domain.Index_Info.dto.IndexInfoUpdateDto;
 import com.example.findex.domain.Index_Info.service.IndexInfoService;
-import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,7 +27,7 @@ public class IndexInfoController {
   private final IndexInfoService service;
 
   @PostMapping
-  public ResponseEntity<IndexInfoDto> create(@Valid @RequestBody IndexInfoCreateRequest request) {
+  public ResponseEntity<IndexInfoDto> create(@RequestBody IndexInfoCreateRequest request) {
     IndexInfoDto created = service.create(request);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
 
@@ -53,7 +52,7 @@ public class IndexInfoController {
 
   @PatchMapping("/{id}")
   public ResponseEntity<IndexInfoDto> update(@PathVariable("id") Long id,
-      @Valid @RequestBody IndexInfoUpdateDto request) {
+      @RequestBody IndexInfoUpdateDto request) {
     return ResponseEntity.ok(service.update(id, request));
   }
 
