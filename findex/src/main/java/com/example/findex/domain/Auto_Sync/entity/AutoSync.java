@@ -4,12 +4,13 @@ import com.example.findex.common.base.BaseEntity;
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // ✨ 무분별한 객체 생성을 막기 위해 접근 수준을 PROTECTED로 설정
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @Table(name = "auto_sync_config")
 public class AutoSync extends BaseEntity {
 

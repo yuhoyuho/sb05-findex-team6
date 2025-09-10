@@ -8,12 +8,13 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @Table(name = "sync_job")
 public class SyncJobLog extends BaseEntity {
 
