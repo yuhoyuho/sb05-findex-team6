@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.util.Base64;
 import java.util.List;
 
+import static com.example.findex.domain.Auto_Sync.entity.QAutoSync.autoSync;
 import static com.example.findex.domain.Index_data.entity.QIndexData.indexData;
 import static com.example.findex.domain.Index_Info.entity.QIndexInfo.indexInfo;
 
@@ -49,6 +50,7 @@ public class IndexDataRepositoryImpl implements IndexDataRepositoryCustom {
         return queryFactory
                 .selectFrom(indexData)
                 .join(indexData.indexInfo, indexInfo).fetchJoin()
+                .leftJoin(indexInfo.autoSync, autoSync).fetchJoin()
                 .where(whereClause)
                 .orderBy(buildOrderSpecifier(sortField, sortDirection))
                 .limit(size + 1)
