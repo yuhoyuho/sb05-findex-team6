@@ -15,6 +15,17 @@ import org.springframework.web.bind.annotation.*;
 public class AutoSyncController {
 
     private final AutoSyncService autoSyncService;
+    /*
+    export interface AutoSyncConfigQueryParams {
+  indexInfoId?: number;
+  enabled?: boolean;
+  idAfter?: number;
+  cursor?: string;
+  sortField?: 'indexName' | 'enabled';
+  sortDirection?: 'asc' | 'desc';
+  size?: number;
+}
+     */
 
     @GetMapping
     public ResponseEntity<CursorPageResponseAutoSyncConfigDto<AutoSyncConfigDto>> findAll(
@@ -26,24 +37,8 @@ public class AutoSyncController {
             @RequestParam(value = "sortDirection", defaultValue = "desc") String sortDirection,
             @RequestParam(value = "size", defaultValue = "30") int size) {
 
-        // 파라미터 검증
-        if (size <= 0 || size > 100) {
-            size = 30;
-        }
-
-        // sortField 검증 (프론트엔드에서 정의한 값만 허용)
-        if (!"indexName".equals(sortField) && !"enabled".equals(sortField)) {
-            sortField = "indexName";
-        }
-
-        // sortDirection 검증
-        if (!"asc".equals(sortDirection) && !"desc".equals(sortDirection)) {
-            sortDirection = "desc";
-        }
-
         CursorPageResponseAutoSyncConfigDto<AutoSyncConfigDto> response =
                 autoSyncService.findPage(indexInfoId, enabled, cursor, idAfter, sortField, sortDirection, size);
-
         return ResponseEntity.ok(response);
     }
 

@@ -22,22 +22,25 @@ public class AutoSyncService {
     private final AutoSyncRepository autoSyncRepository;
     private final AutoSyncMapper autoSyncMapper;
 
+    /*
+    export interface AutoSyncConfigQueryParams {
+  indexInfoId?: number;
+  enabled?: boolean;
+  idAfter?: number;
+  cursor?: string;
+  sortField?: 'indexName' | 'enabled';
+  sortDirection?: 'asc' | 'desc';
+  size?: number;
+}
+     */
+
     @Transactional(readOnly = true)
     public CursorPageResponseAutoSyncConfigDto<AutoSyncConfigDto> findPage(
             Long indexInfoId, Boolean enabled, String cursor, Long idAfter, String sortField, String sortDirection, int size) {
+            // sortDirection 포함하면 분기를 여러번 나눠야 해서 쿼리 복잡해짐.. 일단 기본값으로 대체.
         Long cursorIndexId = null;
         if(cursor != null && !cursor.isEmpty()) {
-            try {
-                cursorIndexId = Long.parseLong(cursor);
-
-                // 커서 유효성 검사: 해당 커서가 현재 필터 조건에 맞는지 확인
-                if (!isCursorValidForFilter(cursorIndexId, indexInfoId, enabled, sortField)) {
-                    System.out.println("Invalid cursor for current filter conditions, resetting to first page");
-                    cursorIndexId = null; // 첫 페이지로 리셋
-                }
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid cursor format: " + cursor);
-            }
+            cursorIndexId = Long.parseLong(cursor);
         } else if(idAfter != null) {
             cursorIndexId = idAfter;
         }
@@ -52,12 +55,7 @@ public class AutoSyncService {
         }
 
         List<AutoSync> autoSyncs = slice.getContent();
-        boolean hasNext = slice.hasNext();
-
-        // size만큼만 반환
-        if(autoSyncs.size() > size) {
-            autoSyncs = autoSyncs.subList(0, size);
-        }
+        boolean hasNext = autoSyncs.size() > size;
 
         String nextCursor = null;
         Long nextIdAfter = null;
@@ -74,17 +72,12 @@ public class AutoSyncService {
 
         return new CursorPageResponseAutoSyncConfigDto<>(
                 content,
-                nextCursor,      // indexInfo.id를 문자열로
+                nextCursor,      // indexInfo.id 문자열
                 nextIdAfter,     // indexInfo.id 숫자값
-                content.size(),
+                size,
                 (long) content.size(),
                 hasNext
         );
-    }
-
-    private boolean isCursorValidForFilter(Long cursorId, Long indexInfoId, Boolean enabled, String sortField) {
-        // 해당 커서 ID가 현재 필터 조건에 존재하는지 확인
-        return autoSyncRepository.existsByCursorAndFilter(cursorId, indexInfoId, enabled, sortField);
     }
 
     @Transactional
