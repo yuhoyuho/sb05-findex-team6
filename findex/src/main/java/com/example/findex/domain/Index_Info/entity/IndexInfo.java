@@ -6,6 +6,7 @@ import com.example.findex.domain.Auto_Sync.entity.AutoSync;
 import com.example.findex.domain.Index_Info.dto.IndexInfoCreateRequest;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
