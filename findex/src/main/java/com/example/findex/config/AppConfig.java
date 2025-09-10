@@ -10,7 +10,7 @@ public class AppConfig {
     @Bean
     public WebClient webClient() {
         return WebClient.builder()
-                .baseUrl("https://apis.data.go.kr")
+//                .baseUrl("https://apis.data.go.kr")
                 .build();
     }
 }
