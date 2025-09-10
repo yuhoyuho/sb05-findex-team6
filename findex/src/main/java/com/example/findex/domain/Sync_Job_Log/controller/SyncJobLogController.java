@@ -9,11 +9,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -30,13 +28,15 @@ public class SyncJobLogController {
      * 지수 정보 연동 (해당 날짜의 지수 정보/데이터 모두 연동)
      */
     @PostMapping("/index-infos")
-    public ResponseEntity<List<SyncJobLogDto>> syncIndexInfos(HttpServletRequest request) {
+    public ResponseEntity<List<SyncJobLogDto>> syncIndexInfos(
+            HttpServletRequest request,
+            @RequestParam(value = "date", required = false) LocalDate date) {
 
         String clientIp = getClientIp(request);
 
         // scheduler를 통해서 batch 작업 수행 시에는 http 요청이 없기 때문에
         // batch를 실행하는 서비스 코드에서 worker를 "SYSTEM"으로 명시
-        List<SyncJobLog> jobLogs = syncJobLogService.syncAndLogLatestIndexData(clientIp);
+        List<SyncJobLog> jobLogs = syncJobLogService.syncAndLogLatestIndexData(clientIp, date);
 
         // entity -> dto
         List<SyncJobLogDto> response = syncJobLogMapper.toDtoList(jobLogs);

@@ -27,7 +27,8 @@ public class SyncJobLogService {
      * 오늘 날짜의 모든 지수/정보를 연동하고 로그를 기록하는 메서드
      */
     @Transactional
-    public List<SyncJobLog> syncAndLogLatestIndexData(String worker) {
+    public List<SyncJobLog> syncAndLogLatestIndexData(String worker, LocalDate date) {
+        LocalDate target = date == null ? LocalDate.now() : date;
         LocalDate today = LocalDate.now();
 
 //        List<SyncResult> syncResults = indexSyncService.syncDailyDataAndWithResults(today);
@@ -54,7 +55,7 @@ public class SyncJobLogService {
 //        log.info("{}건의 동기화 작업 로그가 기록되었습니다.", createdLogs.size());
 //        return createdLogs;
 
-        List<SyncResult> result = indexSyncService.syncIndexDataByFilter(today, today, null);
+        List<SyncResult> result = indexSyncService.syncIndexDataByFilter(target, target, null);
         return createLogsFromResult(result, worker);
     }
 

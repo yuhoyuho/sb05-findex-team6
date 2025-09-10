@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+
 @Component
 @RequiredArgsConstructor
 public class IndexDataScheduler {
@@ -13,6 +15,6 @@ public class IndexDataScheduler {
     // 새벽 4시
     @Scheduled(cron = "0 0 4 * * *")
     public void runDailySyncJob() {
-        syncJobLogService.syncAndLogLatestIndexData("SYSTEM");
+        syncJobLogService.syncAndLogLatestIndexData("SYSTEM", LocalDate.now());
     }
 }
