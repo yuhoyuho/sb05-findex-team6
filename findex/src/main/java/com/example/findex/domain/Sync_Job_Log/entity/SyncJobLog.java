@@ -9,6 +9,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Getter
