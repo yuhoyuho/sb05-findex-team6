@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,22 +23,13 @@ public class AutoSyncService {
     private final AutoSyncRepository autoSyncRepository;
     private final AutoSyncMapper autoSyncMapper;
 
-    /*
-    export interface AutoSyncConfigQueryParams {
-  indexInfoId?: number;
-  enabled?: boolean;
-  idAfter?: number;
-  cursor?: string;
-  sortField?: 'indexName' | 'enabled';
-  sortDirection?: 'asc' | 'desc';
-  size?: number;
-}
-     */
-
     @Transactional(readOnly = true)
     public CursorPageResponseAutoSyncConfigDto<AutoSyncConfigDto> findPage(
             Long indexInfoId, Boolean enabled, String cursor, Long idAfter, String sortField, String sortDirection, int size) {
-            // sortDirection 포함하면 분기를 여러번 나눠야 해서 쿼리 복잡해짐.. 일단 기본값으로 대체.
+        /*
+        sortField?: 'indexName' | 'enabled';
+        sortDirection?: 'asc' | 'desc';
+         */
         Long cursorIndexId = null;
         if(cursor != null && !cursor.isEmpty()) {
             cursorIndexId = Long.parseLong(cursor);
@@ -45,13 +37,24 @@ public class AutoSyncService {
             cursorIndexId = idAfter;
         }
 
-        Pageable pageable = PageRequest.of(0, size + 1);
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("asc")
+                ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        Pageable pageable = PageRequest.of(0, size + 1, Sort.by(direction,
+                sortField.equals("indexName") ? "indexInfo.indexName" :
+                        sortField.equals("enabled")   ? "enabled" :
+                                "indexInfo.id"
+        ));
 
         Slice<AutoSync> slice;
-        if(cursorIndexId == null) {
-            slice = autoSyncRepository.findFirstPageByConditions(indexInfoId, enabled, sortField, pageable);
+        if (cursorIndexId == null) {
+            slice = autoSyncRepository.findFirstPageByConditions(indexInfoId, enabled, pageable);
         } else {
-            slice = autoSyncRepository.findAfterCursorByConditions(indexInfoId, enabled, cursorIndexId, sortField, pageable);
+            if (direction == Sort.Direction.ASC) {
+                slice = autoSyncRepository.findAfterCursorAsc(indexInfoId, enabled, cursorIndexId, pageable);
+            } else {
+                slice = autoSyncRepository.findAfterCursorDesc(indexInfoId, enabled, cursorIndexId, pageable);
+            }
         }
 
         List<AutoSync> autoSyncs = slice.getContent();
@@ -62,7 +65,7 @@ public class AutoSyncService {
 
         if(hasNext && !autoSyncs.isEmpty()) {
             AutoSync lastItem = autoSyncs.get(autoSyncs.size() - 1);
-            nextIdAfter = lastItem.getIndexInfo().getId(); // indexInfo.id 사용
+            nextIdAfter = lastItem.getIndexInfo().getId();
             nextCursor = String.valueOf(nextIdAfter);
         }
 

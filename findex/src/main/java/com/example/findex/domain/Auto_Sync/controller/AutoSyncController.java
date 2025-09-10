@@ -15,17 +15,6 @@ import org.springframework.web.bind.annotation.*;
 public class AutoSyncController {
 
     private final AutoSyncService autoSyncService;
-    /*
-    export interface AutoSyncConfigQueryParams {
-  indexInfoId?: number;
-  enabled?: boolean;
-  idAfter?: number;
-  cursor?: string;
-  sortField?: 'indexName' | 'enabled';
-  sortDirection?: 'asc' | 'desc';
-  size?: number;
-}
-     */
 
     @GetMapping
     public ResponseEntity<CursorPageResponseAutoSyncConfigDto<AutoSyncConfigDto>> findAll(

@@ -62,7 +62,7 @@ public class IndexSyncService {
                     .orElseGet(() -> {
                         IndexInfo newInfo = createIndexInfoFromDto(item);
                         indexInfoRepository.save(newInfo);
-                        createAutoSyncIfAbsent(newInfo);
+                        createAutoSyncIfAbsent(newInfo); // [자동 연동 설정] 생성
                         return newInfo;
                     });
 
@@ -72,6 +72,7 @@ public class IndexSyncService {
         log.info("{} 날짜의 지수 데이터 동기화가 성공적으로 완료되었습니다. ({}건 처리)", date, items.size());
     }
 
+    // [자동 연동 설정] 생성 코드
     private void createAutoSyncIfAbsent(IndexInfo indexInfo) {
         if(autoSyncRepository.findByIndexInfo_Id(indexInfo.getId()).isPresent()) {
             return;

@@ -12,36 +12,42 @@ import java.util.Optional;
 public interface AutoSyncRepository extends JpaRepository<AutoSync, Long> {
 
     @Query("""
-                select a from AutoSync a
-                where (:indexInfoId is null or a.indexInfo.id = :indexInfoId)
-                and (:enabled is null or a.enabled = :enabled)
-                order by 
-                    case when :sortField = 'indexName' then a.indexInfo.indexName end desc,
-                    case when :sortField = 'enabled' then a.enabled end desc,
-                    a.indexInfo.id desc
-            """)
+    select a from AutoSync a
+    join a.indexInfo info
+    where (:indexInfoId is null or info.id = :indexInfoId)
+    and (:enabled is null or a.enabled = :enabled)
+    """)
     Slice<AutoSync> findFirstPageByConditions(
             @Param("indexInfoId") Long indexInfoId,
             @Param("enabled") Boolean enabled,
-            @Param("sortField") String sortField,
             Pageable pageable
     );
 
     @Query("""
-                select a from AutoSync a
-                where (:indexInfoId is null or a.indexInfo.id = :indexInfoId)
-                and (:enabled is null or a.enabled = :enabled)
-                and a.indexInfo.id < :cursorIndexId
-                order by 
-                    case when :sortField = 'indexName' then a.indexInfo.indexName end desc,
-                    case when :sortField = 'enabled' then a.enabled end desc,
-                    a.indexInfo.id desc
-            """)
-    Slice<AutoSync> findAfterCursorByConditions(
+    select a from AutoSync a
+    join a.indexInfo info
+    where (:indexInfoId is null or info.id = :indexInfoId)
+    and (:enabled is null or a.enabled = :enabled)
+    and info.id > :cursorIndexId
+    """)
+    Slice<AutoSync> findAfterCursorAsc(
             @Param("indexInfoId") Long indexInfoId,
             @Param("enabled") Boolean enabled,
             @Param("cursorIndexId") Long cursorIndexId,
-            @Param("sortField") String sortField,
+            Pageable pageable
+    );
+
+    @Query("""
+    select a from AutoSync a
+    join a.indexInfo info
+    where (:indexInfoId is null or info.id = :indexInfoId)
+    and (:enabled is null or a.enabled = :enabled)
+    and info.id < :cursorIndexId
+    """)
+    Slice<AutoSync> findAfterCursorDesc(
+            @Param("indexInfoId") Long indexInfoId,
+            @Param("enabled") Boolean enabled,
+            @Param("cursorIndexId") Long cursorIndexId,
             Pageable pageable
     );
 
