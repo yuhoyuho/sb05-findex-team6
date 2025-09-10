@@ -9,14 +9,13 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
-import lombok.experimental.SuperBuilder;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @SuperBuilder
-@Table(name = "sync_job")
+@Table(name = "integration_job")
 public class SyncJobLog extends BaseEntity {
 
     @Id
