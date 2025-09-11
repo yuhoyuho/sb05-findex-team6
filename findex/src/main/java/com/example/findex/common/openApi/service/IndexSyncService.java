@@ -3,6 +3,8 @@ package com.example.findex.common.openApi.service;
 import com.example.findex.common.base.JobResult;
 import com.example.findex.common.base.SourceType;
 import com.example.findex.common.openApi.dto.IndexApiResponseDto;
+import com.example.findex.domain.Auto_Sync.entity.AutoSync;
+import com.example.findex.domain.Auto_Sync.repository.AutoSyncRepository;
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import com.example.findex.domain.Index_Info.repository.IndexInfoRepository;
 import com.example.findex.domain.Index_data.entity.IndexData;
@@ -30,6 +32,7 @@ public class IndexSyncService {
     private final OpenApiService openApiService;
     private final IndexInfoRepository indexInfoRepository;
     private final IndexDataRepository indexDataRepository;
+    private final AutoSyncRepository autoSyncRepository;
 
     @Transactional
     public void syncDailyData(LocalDate date) {
@@ -63,13 +66,27 @@ public class IndexSyncService {
                     .findByIndexNameAndIndexClassification(item.getIndexName(), item.getIndexClassification())
                     .orElseGet(() -> {
                         IndexInfo newInfo = createIndexInfoFromDto(item);
-                        return indexInfoRepository.save(newInfo);
+                        indexInfoRepository.save(newInfo);
+                        createAutoSyncIfAbsent(newInfo); // [자동 연동 설정] 생성
+                        return newInfo;
                     });
 
             IndexData indexData = createIndexDataFromDto(item, indexInfo);
             indexDataRepository.save(indexData);
         }
         log.info("{} 날짜의 지수 데이터 동기화가 성공적으로 완료되었습니다. ({}건 처리)", date, items.size());
+    }
+
+    // [자동 연동 설정] 생성 코드
+    private void createAutoSyncIfAbsent(IndexInfo indexInfo) {
+        if(autoSyncRepository.findByIndexInfo_Id(indexInfo.getId()).isPresent()) {
+            return;
+        }
+        AutoSync autoSync = AutoSync.builder()
+                .indexInfo(indexInfo)
+                .enabled(false)
+                .build();
+        autoSyncRepository.save(autoSync);
     }
 
     /// 이 아래에서 본인이 맡은 부분 파싱하는 로직 작성하면 될 것 같습니다.

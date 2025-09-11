@@ -18,7 +18,7 @@ import java.time.LocalDate;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @SuperBuilder
-@Table(name = "sync_job")
+@Table(name = "integration_job")
 public class SyncJobLog extends BaseEntity {
 
     @Id
