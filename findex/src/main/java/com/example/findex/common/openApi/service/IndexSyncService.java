@@ -19,10 +19,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -128,22 +125,13 @@ public class IndexSyncService {
             // db에 저장하고 로그 기록
             for(IndexApiResponseDto.Item item : filteredItems) {
 
-                IndexInfo indexInfo = null;
-                LocalDate actualDate = parseLocalDate(item.getBaseDate());
-
                 try {
-
-                    indexInfo = findOrCreateIndexInfo(item);
-
-                    IndexData indexData = createIndexDataFromDto(item, indexInfo);
-                    indexDataRepository.save(indexData);
-
-                    result.add(new SyncResult(JobResult.SUCCESS, indexInfo, "데이터 동기화 성공", actualDate));
-
+                    SyncResult syncResult = upsertIndexDate(item);
+                    result.add(syncResult);
                 } catch(Exception e) {
-
                     log.error("지수 '{}' 데이터 동기화 중 예외 발생", item.getIndexName(), e);
-                    result.add(new SyncResult(JobResult.FAILURE, indexInfo, e.getMessage(), actualDate));
+                    IndexInfo info = indexInfoRepository.findByIndexNameAndIndexClassification(item.getIndexName(), item.getIndexClassification()).orElse(null);
+                    result.add(new SyncResult(JobResult.FAILURE, info, e.getMessage(), parseLocalDate(item.getBaseDate())));
                 }
             }
         }
@@ -151,6 +139,33 @@ public class IndexSyncService {
         log.info("필터링된 지수 데이터 동기화가 완료되었습니다. (총 {}일, {}건 처리)", start.until(end).getDays() + 1, result.size());
         return result;
     }
+
+    // IndexData를 Update 또는 Insert하는 메서드
+    @Transactional
+    public SyncResult upsertIndexDate(IndexApiResponseDto.Item item) {
+        // IndexInfo를 찾거나 새로 생성
+        IndexInfo indexInfo = indexInfoRepository
+                .findByIndexNameAndIndexClassification(item.getIndexName(), item.getIndexClassification())
+                .orElseGet(() -> indexInfoRepository.save(createIndexInfoFromDto(item)));
+
+        LocalDate targetDate = parseLocalDate(item.getBaseDate());
+
+        // indexInfoId와 targetDate로 기존 데이터가 있는지 조회
+        Optional<IndexData> existingDataOpt = indexDataRepository.findByIndexInfoIdAndBaseDate(indexInfo.getId(), targetDate);
+
+        if (existingDataOpt.isPresent()) {
+            // 데이터가 존재하면 업데이트
+            IndexData existingData = existingDataOpt.get();
+            existingData.updateData(item); // 엔티티에 추가한 업데이트 메서드 사용
+            return new SyncResult(JobResult.SUCCESS, indexInfo, "데이터 업데이트", targetDate);
+        } else {
+            // 데이터가 없으면 데이터베이스에 저장
+            IndexData newData = createIndexDataFromDto(item, indexInfo);
+            indexDataRepository.save(newData);
+            return new SyncResult(JobResult.SUCCESS, indexInfo, "데이터 저장", targetDate);
+        }
+    }
+
 
     public IndexInfo findOrCreateIndexInfo(IndexApiResponseDto.Item item) {
         return indexInfoRepository

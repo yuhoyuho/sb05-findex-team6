@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -40,7 +41,7 @@ public class SyncJobLog extends BaseEntity {
     private String worker; // 작업자
 
     @Column(name = "job_time", nullable = false)
-    private LocalDate jobTime; // 작업 일시
+    private LocalDateTime jobTime; // 작업 일시
 
     @Enumerated(EnumType.STRING)
     @Column(name = "result", nullable = false, length = 10)

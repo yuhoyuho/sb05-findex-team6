@@ -1,7 +1,9 @@
 package com.example.findex.domain.Sync_Job_Log.controller;
 
+import com.example.findex.domain.Sync_Job_Log.dto.CursorPageResponse;
 import com.example.findex.domain.Sync_Job_Log.dto.IndexDataSyncRequest;
 import com.example.findex.domain.Sync_Job_Log.dto.SyncJobLogDto;
+import com.example.findex.domain.Sync_Job_Log.dto.SyncJobQueryParams;
 import com.example.findex.domain.Sync_Job_Log.entity.SyncJobLog;
 import com.example.findex.domain.Sync_Job_Log.mapper.SyncJobLogMapper;
 import com.example.findex.domain.Sync_Job_Log.service.SyncJobLogService;
@@ -68,7 +70,12 @@ public class SyncJobLogController {
      * EndPoint : /api/sync-jobs
      */
     @GetMapping("/")
-    public ResponseEntity<>
+    public ResponseEntity<CursorPageResponse<SyncJobLogDto>> getSyncJobs(
+            @ModelAttribute SyncJobQueryParams params) {
+
+        CursorPageResponse<SyncJobLogDto> response = syncJobLogService.getSyncJobList(params);
+        return ResponseEntity.ok(response);
+    }
 
     private String getClientIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
