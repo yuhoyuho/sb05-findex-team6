@@ -63,6 +63,13 @@ public class SyncJobLogController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 
+    /**
+     * HTTP : GET
+     * EndPoint : /api/sync-jobs
+     */
+    @GetMapping("/")
+    public ResponseEntity<>
+
     private String getClientIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
 

@@ -1,0 +1,10 @@
+package com.example.findex.domain.Sync_Job_Log.dto;
+
+import java.util.List;
+
+public record CursorResponse<T>(
+        List<T> content,
+        String nextCursor,
+        int size,
+        boolean hasNext
+) {}
