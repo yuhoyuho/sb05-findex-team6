@@ -65,21 +65,33 @@ public class IndexInfoService {
         .toList();
   }
 
-  public CursorPageResponseIndexInfoDto findByCursorAndSort(Long cursor, int size,String sortField, String sortDirection) {
+  public CursorPageResponseIndexInfoDto findByCursorAndSortAndFilter(Long cursor, int size, String sortField, String sortDirection, String filterField, String filterValue) {
     Sort sort = sortDirection.equalsIgnoreCase("asc")
         ? Sort.by(sortField).ascending()
         : Sort.by(sortField).descending();
+
+
 
     Pageable pageable = PageRequest.of(0, size, sort);
 
     List<IndexInfo> entities;
 
-    if (cursor == null) {
-      entities = repository.findAll(pageable).getContent();
+    if (filterField != null && filterValue != null) {
+      // 필터링
+      if (cursor == null) {
+        entities = repository.findByFilter(filterField, filterValue, pageable).getContent();
+      } else {
+        entities = repository.findByCursorAndFilter(cursor, filterField, filterValue, pageable);
+      }
     } else {
-      // 커서 이후 데이터만 가져오기 (id 기준)
-      entities = repository.findByIdGreaterThan(cursor, pageable);
+      if (cursor == null) {
+        entities = repository.findAll(pageable).getContent();
+      } else {
+        // 커서 이후 데이터만 가져오기 (id 기준)
+        entities = repository.findByIdGreaterThan(cursor, pageable);
+      }
     }
+
 
     List<IndexInfoDto> content = entities.stream()
         .map(mapper::toDto)
