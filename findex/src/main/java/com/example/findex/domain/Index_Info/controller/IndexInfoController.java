@@ -51,10 +51,12 @@ public class IndexInfoController {
       @RequestParam(required = false) Long cursor,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(required = false) String sortField,
-      @RequestParam(required = false) String sortDirection
+      @RequestParam(required = false) String sortDirection,
+      @RequestParam(required = false) String filterField,
+      @RequestParam(required = false) String filterValue
   ) {
     CursorPageResponseIndexInfoDto response =
-        service.findByCursorAndSort(cursor, size, sortField, sortDirection);
+        service.findByCursorAndSort(cursor, size, sortField, sortDirection,filterField,filterValue);
 
     return ResponseEntity.ok(response);
   }
