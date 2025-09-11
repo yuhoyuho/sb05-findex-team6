@@ -40,7 +40,7 @@ public class AutoSyncService {
         Sort.Direction direction = sortDirection.equalsIgnoreCase("asc")
                 ? Sort.Direction.ASC : Sort.Direction.DESC;
 
-        Pageable pageable = PageRequest.of(0, size + 1, Sort.by(direction,
+        Pageable pageable = PageRequest.of(0, size+1, Sort.by(direction,
                 sortField.equals("indexName") ? "indexInfo.indexName" :
                         sortField.equals("enabled")   ? "enabled" :
                                 "indexInfo.id"
@@ -60,25 +60,28 @@ public class AutoSyncService {
         List<AutoSync> autoSyncs = slice.getContent();
         boolean hasNext = autoSyncs.size() > size;
 
+        List<AutoSync> actualContent = hasNext ?
+                autoSyncs.subList(0, size) : autoSyncs;
+
         String nextCursor = null;
         Long nextIdAfter = null;
 
-        if(hasNext && !autoSyncs.isEmpty()) {
-            AutoSync lastItem = autoSyncs.get(autoSyncs.size() - 1);
+        if(hasNext && !actualContent.isEmpty()) {
+            AutoSync lastItem = actualContent.get(actualContent.size() - 1);
             nextIdAfter = lastItem.getIndexInfo().getId();
             nextCursor = String.valueOf(nextIdAfter);
         }
 
-        List<AutoSyncConfigDto> content = autoSyncs.stream()
+        List<AutoSyncConfigDto> ActualContents = actualContent.stream()
                 .map(autoSyncMapper::toDto)
                 .toList();
 
         return new CursorPageResponseAutoSyncConfigDto<>(
-                content,
+                ActualContents,
                 nextCursor,      // indexInfo.id 문자열
                 nextIdAfter,     // indexInfo.id 숫자값
                 size,
-                (long) content.size(),
+                (long) ActualContents.size(),
                 hasNext
         );
     }
