@@ -6,6 +6,7 @@ import com.example.findex.domain.Auto_Sync.dto.AutoSyncConfigDto;
 import com.example.findex.domain.Auto_Sync.dto.AutoSyncConfigUpdateRequest;
 import com.example.findex.domain.Auto_Sync.dto.CursorPageResponseAutoSyncConfigDto;
 import com.example.findex.domain.Auto_Sync.mapper.AutoSyncMapper;
+import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -84,6 +85,18 @@ public class AutoSyncService {
                 (long) ActualContents.size(),
                 hasNext
         );
+    }
+
+    @Transactional
+    public void create(IndexInfo indexInfo) {
+        if(autoSyncRepository.findByIndexInfo_Id(indexInfo.getId()).isPresent()) {
+            return;
+        }
+        AutoSync autoSync = AutoSync.builder()
+                .indexInfo(indexInfo)
+                .enabled(false)
+                .build();
+        autoSyncRepository.save(autoSync);
     }
 
     @Transactional
