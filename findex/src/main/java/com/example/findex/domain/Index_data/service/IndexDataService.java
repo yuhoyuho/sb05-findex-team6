@@ -250,6 +250,7 @@ public class IndexDataService {
                 .mapToDouble(d -> d.getClosingPrice().doubleValue())
                 .average()
                 .orElse(0.0);
+    }
 
     private String formatNumber(BigDecimal value) {
         return value != null ? String.format("%.2f", value) : "0.00";
