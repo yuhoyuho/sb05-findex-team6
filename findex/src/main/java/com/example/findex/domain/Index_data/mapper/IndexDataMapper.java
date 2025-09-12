@@ -11,6 +11,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Mapper(componentModel = "spring")
@@ -20,6 +21,15 @@ public interface IndexDataMapper {
 
     @Mapping(source = "indexInfo.id", target = "indexInfoId")
     @Mapping(source = "sourceType", target = "sourceType", qualifiedByName = "sourceTypeToString")
+    @Mapping(source = "marketPrice", target = "marketPrice", qualifiedByName = "nullToZeroBigDecimal")
+    @Mapping(source = "closingPrice", target = "closingPrice", qualifiedByName = "nullToZeroBigDecimal")
+    @Mapping(source = "highPrice", target = "highPrice", qualifiedByName = "nullToZeroBigDecimal")
+    @Mapping(source = "lowPrice", target = "lowPrice", qualifiedByName = "nullToZeroBigDecimal")
+    @Mapping(source = "versus", target = "versus", qualifiedByName = "nullToZeroBigDecimal")
+    @Mapping(source = "fluctuationRate", target = "fluctuationRate", qualifiedByName = "nullToZeroBigDecimal")
+    @Mapping(source = "tradingQuantity", target = "tradingQuantity", qualifiedByName = "nullToZeroLong")
+    @Mapping(source = "tradingPrice", target = "tradingPrice", qualifiedByName = "nullToZeroLong")
+    @Mapping(source = "marketTotalAmount", target = "marketTotalAmount", qualifiedByName = "nullToZeroLong")
     IndexDataDto toDto(IndexData indexData);
 
     @Mapping(target = "id", ignore = true)
@@ -42,5 +52,15 @@ public interface IndexDataMapper {
     @Named("sourceTypeToString")
     default String sourceTypeToString(SourceType sourceType) {
         return sourceType != null ? sourceType.name() : null;
+    }
+
+    @Named("nullToZeroBigDecimal")
+    default BigDecimal nullToZeroBigDecimal(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
+    }
+
+    @Named("nullToZeroLong")
+    default Long nullToZeroLong(Long value) {
+        return value != null ? value : 0L;
     }
 }
