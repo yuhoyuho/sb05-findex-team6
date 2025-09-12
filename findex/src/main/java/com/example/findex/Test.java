@@ -23,7 +23,7 @@ public class Test implements CommandLineRunner {
 
         // 💡 테스트하고 싶은 날짜를 지정합니다.
         // 공휴일이나 주말에는 데이터가 없을 수 있으니, 가장 최근의 평일로 설정하는 것이 좋습니다.
-        LocalDate testDate = LocalDate.of(2025, 9, 5); // 예: 2025년 9월 5일 (금요일)
+        LocalDate testDate = LocalDate.of(2025, 9, 6); // 예: 2025년 9월 5일 (금요일)
 
         try {
             // IndexSyncService의 메서드를 직접 호출합니다.

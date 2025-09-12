@@ -8,10 +8,10 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED) // ✨ 무분별한 객체 생성을 막기 위해 접근 수준을 PROTECTED로 설정
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @SuperBuilder
-@Table(name = "auto_sync_config")
+@Table(name = "auto_integration_config")
 public class AutoSync extends BaseEntity {
 
     @Id
@@ -19,17 +19,14 @@ public class AutoSync extends BaseEntity {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "index_info_id", nullable = false, unique = true)
-    private IndexInfo indexInfo; // 지수 정보
+    @JoinColumn(name = "index_info_id",
+            foreignKey = @ForeignKey(name = "fk_index_info_to_config"),
+            nullable = false, unique = true)
+    private IndexInfo indexInfo;
 
-    @Column(name = "enabled", nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
+    @Column(nullable = false)
     private boolean enabled;
 
-    ///     == 비즈니스 로직 ==   ///
-
-    /**
-     * 활성화 상태 수정 메서드
-     */
     public void updateEnabled(boolean enabled) {
         this.enabled = enabled;
     }
