@@ -190,7 +190,7 @@ public class IndexDataService {
         LocalDate startDate = calculateStartDate(endDate, periodType);
 
         // 3. 데이터 조회 (이동평균선 계산을 위해 20일치 데이터 추가 조회)
-        List<IndexData> indexDataList = indexDataRepository.findAllByIndexInfoIdAndBaseDateBetweenOrderByBaseDateAsc(
+        List<IndexData> indexDataList = indexDataRepository.findAllByIndexInfoIdAndBaseDateBetweenOrderByBaseDateDesc(
                 indexInfoId, startDate.minusDays(30), endDate // 넉넉하게 30일 이전 데이터부터 조회
         );
 
@@ -237,9 +237,9 @@ public class IndexDataService {
 
     private LocalDate calculateStartDate(LocalDate endDate, PeriodType periodType) {
         return switch (periodType) {
-            case WEEKLY -> endDate.minusWeeks(1);
-            case MONTHLY -> endDate.minusMonths(1);
-            default -> endDate.minusDays(7); // DAILY 포함
+            case YEARLY -> endDate.minusYears(1);
+            case QUARTERLY -> endDate.minusMonths(3);
+            default -> endDate.minusMonths(1);
         };
     }
 
