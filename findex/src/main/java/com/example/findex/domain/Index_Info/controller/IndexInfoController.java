@@ -1,5 +1,7 @@
 package com.example.findex.domain.Index_Info.controller;
 
+import com.example.findex.domain.Auto_Sync.dto.CursorPageResponseAutoSyncConfigDto;
+import com.example.findex.domain.Index_Info.dto.CursorPageResponseIndexInfoDto;
 import com.example.findex.domain.Index_Info.dto.IndexInfoCreateRequest;
 import com.example.findex.domain.Index_Info.dto.IndexInfoDto;
 import com.example.findex.domain.Index_Info.dto.IndexInfoSummaryDto;
@@ -7,6 +9,8 @@ import com.example.findex.domain.Index_Info.dto.IndexInfoUpdateDto;
 import com.example.findex.domain.Index_Info.service.IndexInfoService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,40 +36,48 @@ public class IndexInfoController {
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
 
   }
-
   @GetMapping
-  public ResponseEntity<?> findAll(
+  public ResponseEntity<CursorPageResponseIndexInfoDto> findAll(
       @RequestParam(required = false) Long cursor,
-      @RequestParam(defaultValue = "10") int size
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(required = false) String sortField,
+      @RequestParam(required = false) String sortDirection,
+      @RequestParam(required = false) String filterField,
+      @RequestParam(required = false) String filterValue,
+      @RequestParam(required = false) String indexClassification
   ) {
-    if (cursor == null) {
-      return ResponseEntity.ok(service.findAll());
-    } else {
-      return ResponseEntity.ok(service.findByCursor(cursor, size));
+    if (filterField == null && indexClassification != null ) {
+      filterField = "indexClassification";
+      filterValue = indexClassification;
     }
+
+    CursorPageResponseIndexInfoDto response =
+        service.findByCursorAndSortAndFilter(cursor, size, sortField, sortDirection,filterField,filterValue);
+
+    return ResponseEntity.ok(response);
   }
 
-  @GetMapping("/{id}")
-  public ResponseEntity<IndexInfoDto> findById(@PathVariable("id") Long id) {
-    return ResponseEntity.ok(service.findById(id));
+    @GetMapping("/{id}")
+    public ResponseEntity<IndexInfoDto> findById (@PathVariable("id") Long id){
+      return ResponseEntity.ok(service.findById(id));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<IndexInfoDto> update (@PathVariable("id") Long id,
+        @RequestBody IndexInfoUpdateDto request){
+      return ResponseEntity.ok(service.update(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete (@PathVariable("id") Long id){
+      service.delete(id);
+      return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/summaries")
+    public ResponseEntity<List<IndexInfoSummaryDto>> getSummaries () {
+      return ResponseEntity.ok(service.findSummaries());
+    }
+
+
   }
-
-  @PatchMapping("/{id}")
-  public ResponseEntity<IndexInfoDto> update(@PathVariable("id") Long id,
-      @RequestBody IndexInfoUpdateDto request) {
-    return ResponseEntity.ok(service.update(id, request));
-  }
-
-  @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
-    service.delete(id);
-    return ResponseEntity.noContent().build();
-  }
-
-  @GetMapping("/summaries")
-  public ResponseEntity<List<IndexInfoSummaryDto>> getSummaries() {
-    return ResponseEntity.ok(service.findSummaries());
-  }
-
-
-}
