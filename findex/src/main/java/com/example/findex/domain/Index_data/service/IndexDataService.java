@@ -178,7 +178,7 @@ public class IndexDataService {
 
         return csv.toString();
     }
-    
+
     @Transactional(readOnly = true)
     public IndexChartResponse getIndexChart(Long indexInfoId, PeriodType periodType) {
         // 1. 지수 정보 조회
@@ -189,9 +189,9 @@ public class IndexDataService {
         LocalDate endDate = LocalDate.now();
         LocalDate startDate = calculateStartDate(endDate, periodType);
 
-        // 3. 데이터 조회 (이동평균선 계산을 위해 20일치 데이터 추가 조회)
-        List<IndexData> indexDataList = indexDataRepository.findAllByIndexInfoIdAndBaseDateBetweenOrderByBaseDateDesc(
-                indexInfoId, startDate.minusDays(30), endDate // 넉넉하게 30일 이전 데이터부터 조회
+        // 3. 데이터 조회 - ASC로 조회 (이동평균 계산을 위해)
+        List<IndexData> indexDataList = indexDataRepository.findAllByIndexInfoIdAndBaseDateBetweenOrderByBaseDateAsc(
+                indexInfoId, startDate.minusDays(30), endDate
         );
 
         if (indexDataList.isEmpty()) {
@@ -199,7 +199,7 @@ public class IndexDataService {
                     Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
         }
 
-        // 4. DTO 변환 및 이동평균선 계산
+        // 4. DTO 변환 및 이동평균선 계산 (ASC 순서로)
         List<ChartDataPoint> dataPoints = new ArrayList<>();
         List<ChartDataPoint> ma5DataPoints = new ArrayList<>();
         List<ChartDataPoint> ma20DataPoints = new ArrayList<>();
@@ -214,7 +214,7 @@ public class IndexDataService {
                 }
             }
 
-            // 5일 이동평균선 계산 (최소 5일치 데이터 필요)
+            // 5일 이동평균선 계산
             if (i >= 4) {
                 double ma5 = calculateMovingAverage(indexDataList, i, 5);
                 if (!currentData.getBaseDate().isBefore(startDate)) {
@@ -222,14 +222,19 @@ public class IndexDataService {
                 }
             }
 
-            // 20일 이동평균선 계산 (최소 20일치 데이터 필요)
+            // 20일 이동평균선 계산
             if (i >= 19) {
                 double ma20 = calculateMovingAverage(indexDataList, i, 20);
-                 if (!currentData.getBaseDate().isBefore(startDate)) {
+                if (!currentData.getBaseDate().isBefore(startDate)) {
                     ma20DataPoints.add(new ChartDataPoint(currentData.getBaseDate(), ma20));
                 }
             }
         }
+
+        // 5. 응답 데이터를 DESC 순서로 정렬
+        Collections.reverse(dataPoints);
+        Collections.reverse(ma5DataPoints);
+        Collections.reverse(ma20DataPoints);
 
         return new IndexChartResponse(indexInfoId, indexInfo.getIndexClassification(), indexInfo.getIndexName(), periodType,
                 dataPoints, ma5DataPoints, ma20DataPoints);
