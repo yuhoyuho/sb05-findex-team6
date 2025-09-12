@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface IndexDataRepository extends JpaRepository<IndexData, Long>, IndexDataRepositoryCustom{
 
@@ -25,4 +26,9 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long>, Ind
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    // OpenAPI 데이터 연동 시 id, base_date 기준으로 데이터 존재 여부 확인
+    Optional<IndexData> findByIndexInfoIdAndBaseDate(Long indexInfoId, LocalDate baseDate);
+    
+    List<IndexData> findAllByIndexInfoIdAndBaseDateBetweenOrderByBaseDateAsc(Long indexInfoId, LocalDate startDate, LocalDate endDate);
 }

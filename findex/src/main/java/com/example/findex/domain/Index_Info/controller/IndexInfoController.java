@@ -1,5 +1,6 @@
 package com.example.findex.domain.Index_Info.controller;
 
+import com.example.findex.domain.Index_Info.dto.CursorPageResponseIndexInfoDto;
 import com.example.findex.domain.Index_Info.dto.IndexInfoCreateRequest;
 import com.example.findex.domain.Index_Info.dto.IndexInfoDto;
 import com.example.findex.domain.Index_Info.dto.IndexInfoSummaryDto;
@@ -32,40 +33,48 @@ public class IndexInfoController {
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
 
   }
-
   @GetMapping
-  public ResponseEntity<?> findAll(
+  public ResponseEntity<CursorPageResponseIndexInfoDto> findAll(
       @RequestParam(required = false) Long cursor,
-      @RequestParam(defaultValue = "10") int size
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(required = false) String sortField,
+      @RequestParam(required = false) String sortDirection,
+      @RequestParam(required = false) String indexClassification,
+      @RequestParam(required = false) String indexName,
+      @RequestParam(required = false) Boolean favorite
+
   ) {
-    if (cursor == null) {
-      return ResponseEntity.ok(service.findAll());
-    } else {
-      return ResponseEntity.ok(service.findByCursor(cursor, size));
+
+
+    CursorPageResponseIndexInfoDto response =
+        service.findByCursorAndSortAndFilter(cursor, size, sortField, sortDirection,indexClassification,indexName,favorite);
+
+    return ResponseEntity.ok(response);
+  }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<IndexInfoDto> findById (@PathVariable("id") Long id){
+      return ResponseEntity.ok(service.findById(id));
     }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<IndexInfoDto> update (@PathVariable("id") Long id,
+        @RequestBody IndexInfoUpdateDto request){
+      return ResponseEntity.ok(service.update(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete (@PathVariable("id") Long id){
+      service.delete(id);
+      return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/summaries")
+    public ResponseEntity<List<IndexInfoSummaryDto>> getSummaries () {
+      return ResponseEntity.ok(service.findSummaries());
+    }
+
+
+
+
   }
-
-  @GetMapping("/{id}")
-  public ResponseEntity<IndexInfoDto> findById(@PathVariable("id") Long id) {
-    return ResponseEntity.ok(service.findById(id));
-  }
-
-  @PatchMapping("/{id}")
-  public ResponseEntity<IndexInfoDto> update(@PathVariable("id") Long id,
-      @RequestBody IndexInfoUpdateDto request) {
-    return ResponseEntity.ok(service.update(id, request));
-  }
-
-  @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
-    service.delete(id);
-    return ResponseEntity.noContent().build();
-  }
-
-  @GetMapping("/summaries")
-  public ResponseEntity<List<IndexInfoSummaryDto>> getSummaries() {
-    return ResponseEntity.ok(service.findSummaries());
-  }
-
-
-}

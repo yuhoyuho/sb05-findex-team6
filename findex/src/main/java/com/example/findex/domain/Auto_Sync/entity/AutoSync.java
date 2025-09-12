@@ -27,6 +27,11 @@ public class AutoSync extends BaseEntity {
     @Column(nullable = false)
     private boolean enabled;
 
+    ///     == 비즈니스 로직 ==   ///
+
+    /**
+     * 활성화 상태 수정 메서드
+     */
     public void updateEnabled(boolean enabled) {
         this.enabled = enabled;
     }
