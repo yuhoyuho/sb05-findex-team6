@@ -1,14 +1,19 @@
 package com.example.findex.domain.Index_data.service;
 
+import com.example.findex.common.base.SourceType;
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import com.example.findex.domain.Index_Info.repository.IndexInfoRepository;
+import com.example.findex.domain.Index_data.dto.ChartDataPoint;
 import com.example.findex.domain.Index_data.dto.CursorPageResponseIndexDataDto;
+import com.example.findex.domain.Index_data.dto.IndexChartResponse;
 import com.example.findex.domain.Index_data.dto.IndexDataCreateRequest;
 import com.example.findex.domain.Index_data.dto.IndexDataDto;
 import com.example.findex.domain.Index_data.dto.IndexDataUpdateRequest;
+import com.example.findex.domain.Index_data.dto.PeriodType;
 import com.example.findex.domain.Index_data.entity.IndexData;
 import com.example.findex.domain.Index_data.mapper.IndexDataMapper;
 import com.example.findex.domain.Index_data.repository.IndexDataRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,8 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Base64;
 import java.util.List;
+import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +37,7 @@ public class IndexDataService {
     private final IndexInfoRepository indexInfoRepository;
     private final IndexDataMapper indexDataMapper;
 
+    @Transactional
     public IndexDataDto createIndexData(IndexDataCreateRequest request) {
         IndexInfo indexInfo = indexInfoRepository.findById(request.getIndexInfoId())
                 .orElseThrow(() -> new IllegalArgumentException("지수를 찾을 수 없습니다: " + request.getIndexInfoId()));
@@ -55,6 +64,7 @@ public class IndexDataService {
         return indexDataMapper.toDto(saved);
     }
 
+    @Transactional
     public void deleteIndexData(Long id) {
         if (!indexDataRepository.existsById(id)) {
             throw new IllegalArgumentException("지수 데이터를 찾을 수 없습니다: " + id);
@@ -133,6 +143,7 @@ public class IndexDataService {
         };
     }
 
+    @Transactional(readOnly = true)
     public String exportToCsv(Long indexInfoId, LocalDate startDate, LocalDate endDate,
                               String sortField, String sortDirection) {
 
@@ -167,6 +178,78 @@ public class IndexDataService {
 
         return csv.toString();
     }
+    
+    @Transactional(readOnly = true)
+    public IndexChartResponse getIndexChart(Long indexInfoId, PeriodType periodType) {
+        // 1. 지수 정보 조회
+        IndexInfo indexInfo = indexInfoRepository.findById(indexInfoId)
+                .orElseThrow(() -> new EntityNotFoundException("IndexInfo not found with id: " + indexInfoId));
+
+        // 2. 기간에 따른 데이터 조회 날짜 범위 설정
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = calculateStartDate(endDate, periodType);
+
+        // 3. 데이터 조회 (이동평균선 계산을 위해 20일치 데이터 추가 조회)
+        List<IndexData> indexDataList = indexDataRepository.findAllByIndexInfoIdAndBaseDateBetweenOrderByBaseDateAsc(
+                indexInfoId, startDate.minusDays(30), endDate // 넉넉하게 30일 이전 데이터부터 조회
+        );
+
+        if (indexDataList.isEmpty()) {
+            return new IndexChartResponse(indexInfoId, indexInfo.getIndexClassification(), indexInfo.getIndexName(), periodType,
+                    Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+        }
+
+        // 4. DTO 변환 및 이동평균선 계산
+        List<ChartDataPoint> dataPoints = new ArrayList<>();
+        List<ChartDataPoint> ma5DataPoints = new ArrayList<>();
+        List<ChartDataPoint> ma20DataPoints = new ArrayList<>();
+
+        for (int i = 0; i < indexDataList.size(); i++) {
+            IndexData currentData = indexDataList.get(i);
+
+            // 차트에 표시될 데이터 (조회 시작일 이후)
+            if (!currentData.getBaseDate().isBefore(startDate)) {
+                if(currentData.getClosingPrice() != null) {
+                    dataPoints.add(new ChartDataPoint(currentData.getBaseDate(), currentData.getClosingPrice().doubleValue()));
+                }
+            }
+
+            // 5일 이동평균선 계산 (최소 5일치 데이터 필요)
+            if (i >= 4) {
+                double ma5 = calculateMovingAverage(indexDataList, i, 5);
+                if (!currentData.getBaseDate().isBefore(startDate)) {
+                    ma5DataPoints.add(new ChartDataPoint(currentData.getBaseDate(), ma5));
+                }
+            }
+
+            // 20일 이동평균선 계산 (최소 20일치 데이터 필요)
+            if (i >= 19) {
+                double ma20 = calculateMovingAverage(indexDataList, i, 20);
+                 if (!currentData.getBaseDate().isBefore(startDate)) {
+                    ma20DataPoints.add(new ChartDataPoint(currentData.getBaseDate(), ma20));
+                }
+            }
+        }
+
+        return new IndexChartResponse(indexInfoId, indexInfo.getIndexClassification(), indexInfo.getIndexName(), periodType,
+                dataPoints, ma5DataPoints, ma20DataPoints);
+    }
+
+    private LocalDate calculateStartDate(LocalDate endDate, PeriodType periodType) {
+        return switch (periodType) {
+            case WEEKLY -> endDate.minusWeeks(1);
+            case MONTHLY -> endDate.minusMonths(1);
+            default -> endDate.minusDays(7); // DAILY 포함
+        };
+    }
+
+    private double calculateMovingAverage(List<IndexData> dataList, int currentIndex, int days) {
+        return dataList.subList(currentIndex - days + 1, currentIndex + 1)
+                .stream()
+                .filter(d -> d.getClosingPrice() != null)
+                .mapToDouble(d -> d.getClosingPrice().doubleValue())
+                .average()
+                .orElse(0.0);
 
     private String formatNumber(BigDecimal value) {
         return value != null ? String.format("%.2f", value) : "0.00";
