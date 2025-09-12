@@ -7,8 +7,10 @@
 
 HELP.md
 .gradle/
+.idea/
 build/
 ./.idea
+**/.idea
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/

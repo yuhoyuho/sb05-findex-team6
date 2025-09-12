@@ -5,17 +5,21 @@ import com.example.findex.common.base.JobResult;
 import com.example.findex.common.base.JobType;
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
-import lombok.experimental.SuperBuilder;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @SuperBuilder
-@Table(name = "sync_job")
+@Table(name = "integration_job")
 public class SyncJobLog extends BaseEntity {
 
     @Id
@@ -37,7 +41,7 @@ public class SyncJobLog extends BaseEntity {
     private String worker; // 작업자
 
     @Column(name = "job_time", nullable = false)
-    private LocalDate jobTime; // 작업 일시
+    private LocalDateTime jobTime; // 작업 일시
 
     @Enumerated(EnumType.STRING)
     @Column(name = "result", nullable = false, length = 10)
