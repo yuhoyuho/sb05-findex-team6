@@ -26,5 +26,5 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long>, Ind
             @Param("endDate") LocalDate endDate
     );
     
-    List<IndexData> findAllByIndexInfoIdAndBaseDateBetweenOrderByBaseDateDesc(Long indexInfoId, LocalDate startDate, LocalDate endDate);
+    List<IndexData> findAllByIndexInfoIdAndBaseDateBetweenOrderByBaseDateAsc(Long indexInfoId, LocalDate startDate, LocalDate endDate);
 }
