@@ -74,8 +74,9 @@ public class IndexDataController {
                 .header("Content-Type", "text/csv; charset=UTF-8")
                 .header("Content-Disposition", "attachment; filename=index_data.csv")
                 .body("\uFEFF" + csvContent);
+    }
                 
-    @GetMapping("/index-data/{id}/chart")
+    @GetMapping("/{id}/chart")
     public ResponseEntity<IndexChartResponse> getIndexChart(
             @PathVariable Long id,
             @RequestParam(defaultValue = "DAILY") PeriodType periodType) {
