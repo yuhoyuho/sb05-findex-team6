@@ -1,6 +1,5 @@
 package com.example.findex.domain.Index_Info.service;
 
-import com.example.findex.common.base.SourceType;
 import com.example.findex.domain.Index_Info.dto.CursorPageResponseIndexInfoDto;
 import com.example.findex.domain.Index_Info.dto.IndexInfoCreateRequest;
 import com.example.findex.domain.Index_Info.dto.IndexInfoDto;
@@ -12,9 +11,7 @@ import com.example.findex.domain.Index_Info.repository.IndexInfoRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,6 +23,7 @@ public class IndexInfoService {
 
   // 전체조회
   public List<IndexInfoDto> findAll() {
+
     return mapper.toDtoList(repository.findAll());
   }
 
@@ -65,33 +63,20 @@ public class IndexInfoService {
         .toList();
   }
 
-  public CursorPageResponseIndexInfoDto findByCursorAndSortAndFilter(Long cursor, int size, String sortField, String sortDirection, String filterField, String filterValue) {
-    Sort sort = sortDirection.equalsIgnoreCase("asc")
-        ? Sort.by(sortField).ascending()
-        : Sort.by(sortField).descending();
+  public CursorPageResponseIndexInfoDto findByCursorAndSortAndFilter(Long cursor, int size,
+      String sortField, String sortDirection, String filterField, String filterValue) {
 
-
-
-    Pageable pageable = PageRequest.of(0, size, sort);
-
-    List<IndexInfo> entities;
+    List<IndexInfo> entities = List.of();
 
     if (filterField != null && filterValue != null) {
-      // 필터링
-      if (cursor == null) {
-        entities = repository.findByFilter(filterField, filterValue, pageable).getContent();
-      } else {
-        entities = repository.findByCursorAndFilter(cursor, filterField, filterValue, pageable);
-      }
+      // 검색할 때
+      entities = repository.findByCursorAndFilter(null, size, sortField, sortDirection, filterField,
+          filterValue);
     } else {
-      if (cursor == null) {
-        entities = repository.findAll(pageable).getContent();
-      } else {
-        // 커서 이후 데이터만 가져오기 (id 기준)
-        entities = repository.findByIdGreaterThan(cursor, pageable);
-      }
+      // 처음 조회
+      entities = repository.findByCursorAndFilter(cursor, size, sortField, sortDirection, null,
+          null);
     }
-
 
     List<IndexInfoDto> content = entities.stream()
         .map(mapper::toDto)

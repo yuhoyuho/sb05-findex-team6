@@ -9,6 +9,8 @@ import com.example.findex.domain.Index_Info.dto.IndexInfoUpdateDto;
 import com.example.findex.domain.Index_Info.service.IndexInfoService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,18 +36,6 @@ public class IndexInfoController {
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
 
   }
-
-  //  @GetMapping
-//  public ResponseEntity<?> findAll(
-//      @RequestParam(required = false) Long cursor,
-//      @RequestParam(defaultValue = "10") int size
-//  ) {
-//    if (cursor == null) {
-//      return ResponseEntity.ok(service.findAll());
-//    } else {
-//      return ResponseEntity.ok(service.findByCursor(cursor, size));
-//    }
-//  }
   @GetMapping
   public ResponseEntity<CursorPageResponseIndexInfoDto> findAll(
       @RequestParam(required = false) Long cursor,
@@ -53,8 +43,14 @@ public class IndexInfoController {
       @RequestParam(required = false) String sortField,
       @RequestParam(required = false) String sortDirection,
       @RequestParam(required = false) String filterField,
-      @RequestParam(required = false) String filterValue
+      @RequestParam(required = false) String filterValue,
+      @RequestParam(required = false) String indexClassification
   ) {
+    if (filterField == null && indexClassification != null ) {
+      filterField = "indexClassification";
+      filterValue = indexClassification;
+    }
+
     CursorPageResponseIndexInfoDto response =
         service.findByCursorAndSortAndFilter(cursor, size, sortField, sortDirection,filterField,filterValue);
 
