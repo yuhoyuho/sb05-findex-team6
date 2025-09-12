@@ -20,51 +20,40 @@ public class IndexInfoRepositoryImpl implements IndexInfoRepositoryCustom {
 
   @Override
   public List<IndexInfo> findByCursorAndFilter(Long cursor, int size, String sortField,
-      String sortDirection, String filterField, String filterValue) {
+      String sortDirection, String indexClassification, String indexName, Boolean favorite) {
+
     QIndexInfo indexInfo = QIndexInfo.indexInfo;
+    BooleanBuilder builder = new BooleanBuilder();
+
+    if (cursor != null) {
+      builder.and(indexInfo.id.gt(cursor));
+    }
+
+    if (indexClassification != null && !indexClassification.isBlank()) {
+      builder.and(indexInfo.indexClassification.containsIgnoreCase(indexClassification));
+    }
+
+    if (indexName != null && !indexName.isBlank()) {
+      builder.and(indexInfo.indexName.containsIgnoreCase(indexName));
+    }
+
+    if (favorite != null) {
+      builder.and(indexInfo.favorite.eq(favorite));
+    }
 
     // 동적 정렬
     PathBuilder<IndexInfo> entityPath = new PathBuilder<>(IndexInfo.class, "indexInfo");
-
     OrderSpecifier<?> orderSpecifier = new OrderSpecifier<>(
         sortDirection != null && sortDirection.equalsIgnoreCase("asc") ? Order.ASC : Order.DESC,
-        entityPath.get(sortField, Comparable.class)
-        // sortField = "id", "indexClassification" 등 엔티티 필드명
+        entityPath.get(sortField != null ? sortField : "id", Comparable.class)
+
     );
-    // 필터링 조건만
-    if (filterField != null && filterValue != null) {
-      BooleanBuilder filterBuilder = new BooleanBuilder();
-
-      switch (filterField) {
-        case "indexClassification" ->
-            filterBuilder.and(indexInfo.indexClassification.eq(filterValue));
-        case "sourceType" -> filterBuilder.and(indexInfo.sourceType.stringValue().eq(filterValue));
-        case "indexName" -> filterBuilder.and(indexInfo.indexName.containsIgnoreCase(filterValue));
-        case "favorite" ->
-            filterBuilder.and(indexInfo.favorite.eq(Boolean.parseBoolean(filterValue)));
-      }
 
       return queryFactory
           .selectFrom(indexInfo)
-          .where(filterBuilder)
-          .orderBy(orderSpecifier)
-          .limit(size)
-          .fetch();
-
-    } else {
-      // 일반 커서 페이지네이션
-      BooleanBuilder cursorBuilder = new BooleanBuilder();
-      if (cursor != null) {
-        cursorBuilder.and(indexInfo.id.gt(cursor));
-      }
-
-      return queryFactory
-          .selectFrom(indexInfo)
-          .where(cursorBuilder)
+          .where(builder)
           .orderBy(orderSpecifier)
           .limit(size)
           .fetch();
     }
-
-  }
 }

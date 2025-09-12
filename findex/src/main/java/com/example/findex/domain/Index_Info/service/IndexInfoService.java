@@ -47,6 +47,11 @@ public class IndexInfoService {
 
     mapper.updateEntityFromRequest(request, entity);
 
+    // favorite 값 업데이트
+    if (request.favorite() != null) {
+      entity.setFavorite(request.favorite());
+    }
+
     return mapper.toDto(repository.save(entity));
   }
 
@@ -63,19 +68,9 @@ public class IndexInfoService {
   }
 
   public CursorPageResponseIndexInfoDto findByCursorAndSortAndFilter(Long cursor, int size,
-      String sortField, String sortDirection, String filterField, String filterValue) {
+      String sortField, String sortDirection, String indexClassification, String indexName, Boolean favorite) {
 
-    List<IndexInfo> entities = List.of();
-
-    if (filterField != null && filterValue != null) {
-      // 검색할 때
-      entities = repository.findByCursorAndFilter(null, size, sortField, sortDirection, filterField,
-          filterValue);
-    } else {
-      // 처음 조회
-      entities = repository.findByCursorAndFilter(cursor, size, sortField, sortDirection, null,
-          null);
-    }
+    List<IndexInfo> entities = repository.findByCursorAndFilter(cursor,size,sortField,sortDirection,indexClassification,indexName,favorite);
 
     List<IndexInfoDto> content = entities.stream()
         .map(mapper::toDto)
