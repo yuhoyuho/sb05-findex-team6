@@ -1,6 +1,5 @@
 package com.example.findex.domain.Index_Info.controller;
 
-import com.example.findex.domain.Auto_Sync.dto.CursorPageResponseAutoSyncConfigDto;
 import com.example.findex.domain.Index_Info.dto.CursorPageResponseIndexInfoDto;
 import com.example.findex.domain.Index_Info.dto.IndexInfoCreateRequest;
 import com.example.findex.domain.Index_Info.dto.IndexInfoDto;
@@ -9,8 +8,6 @@ import com.example.findex.domain.Index_Info.dto.IndexInfoUpdateDto;
 import com.example.findex.domain.Index_Info.service.IndexInfoService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.java.Log;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -44,11 +41,23 @@ public class IndexInfoController {
       @RequestParam(required = false) String sortDirection,
       @RequestParam(required = false) String filterField,
       @RequestParam(required = false) String filterValue,
-      @RequestParam(required = false) String indexClassification
+      @RequestParam(required = false) String indexClassification,
+      @RequestParam(required = false) String indexName,
+      @RequestParam(required = false) Boolean favorite
+
   ) {
+    // 분류 검색
     if (filterField == null && indexClassification != null ) {
       filterField = "indexClassification";
       filterValue = indexClassification;
+    } else if (filterField == null & indexName != null ) {
+      // 지수 검색
+      filterField = "indexName";
+      filterValue = indexName;
+    } else if (filterField == null & favorite != null) {
+      // 즐겨찾기 조회
+      filterField = "favorite";
+      filterValue = favorite.toString();
     }
 
     CursorPageResponseIndexInfoDto response =
