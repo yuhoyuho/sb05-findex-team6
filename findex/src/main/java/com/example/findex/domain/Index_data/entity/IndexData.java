@@ -2,6 +2,7 @@ package com.example.findex.domain.Index_data.entity;
 
 import com.example.findex.common.base.BaseEntity;
 import com.example.findex.common.base.SourceType;
+import com.example.findex.common.openApi.dto.IndexApiResponseDto;
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import jakarta.persistence.*;
 import lombok.*;
@@ -9,7 +10,6 @@ import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import lombok.experimental.SuperBuilder;
 
 @Entity
 @Getter
@@ -69,4 +69,20 @@ public class IndexData extends BaseEntity {
 
     @Column(name = "market_total_amount")
     private Long marketTotalAmount; // 상장 시가 총액
+
+    /**
+     * 비즈니스 메서드
+     * 외부 DTO를 기반으로 엔티티의 값을 업데이트
+     */
+    public void updateData(IndexApiResponseDto.Item item) {
+        this.marketPrice = new BigDecimal(item.getMarketPrice().replace(",", ""));
+        this.closingPrice = new BigDecimal(item.getClosingPrice().replace(",", ""));
+        this.highPrice = new BigDecimal(item.getHighPrice().replace(",", ""));
+        this.lowPrice = new BigDecimal(item.getLowPrice().replace(",", ""));
+        this.versus = new BigDecimal(item.getVersus().replace(",", ""));
+        this.fluctuationRate = new BigDecimal(item.getFluctuationRate().replace(",", ""));
+        this.tradingQuantity = Long.parseLong(item.getTradingQuantity().replace(",", ""));
+        this.tradingPrice = Long.parseLong(item.getTradingPrice().replace(",", ""));
+        this.marketTotalAmount = Long.parseLong(item.getMarketTotalAmount().replace(",", ""));
+    }
 }

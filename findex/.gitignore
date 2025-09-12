@@ -7,6 +7,7 @@
 
 HELP.md
 .gradle/
+.idea/
 build/
 ./.idea
 **/.idea
