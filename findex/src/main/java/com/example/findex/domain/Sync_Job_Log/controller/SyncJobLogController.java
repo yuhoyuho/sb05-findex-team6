@@ -69,7 +69,7 @@ public class SyncJobLogController {
      * HTTP : GET
      * EndPoint : /api/sync-jobs
      */
-    @GetMapping("/")
+    @GetMapping()
     public ResponseEntity<CursorPageResponse<SyncJobLogDto>> getSyncJobs(
             @ModelAttribute SyncJobQueryParams params) {
 
