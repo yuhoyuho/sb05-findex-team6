@@ -39,29 +39,15 @@ public class IndexInfoController {
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(required = false) String sortField,
       @RequestParam(required = false) String sortDirection,
-      @RequestParam(required = false) String filterField,
-      @RequestParam(required = false) String filterValue,
       @RequestParam(required = false) String indexClassification,
       @RequestParam(required = false) String indexName,
       @RequestParam(required = false) Boolean favorite
 
   ) {
-    // 분류 검색
-    if (filterField == null && indexClassification != null ) {
-      filterField = "indexClassification";
-      filterValue = indexClassification;
-    } else if (filterField == null & indexName != null ) {
-      // 지수 검색
-      filterField = "indexName";
-      filterValue = indexName;
-    } else if (filterField == null & favorite != null) {
-      // 즐겨찾기 조회
-      filterField = "favorite";
-      filterValue = favorite.toString();
-    }
+
 
     CursorPageResponseIndexInfoDto response =
-        service.findByCursorAndSortAndFilter(cursor, size, sortField, sortDirection,filterField,filterValue);
+        service.findByCursorAndSortAndFilter(cursor, size, sortField, sortDirection,indexClassification,indexName,favorite);
 
     return ResponseEntity.ok(response);
   }
@@ -87,6 +73,8 @@ public class IndexInfoController {
     public ResponseEntity<List<IndexInfoSummaryDto>> getSummaries () {
       return ResponseEntity.ok(service.findSummaries());
     }
+
+
 
 
   }
