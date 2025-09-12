@@ -3,20 +3,22 @@ package com.example.findex.domain.Index_data.service;
 import com.example.findex.common.base.SourceType;
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import com.example.findex.domain.Index_Info.repository.IndexInfoRepository;
-import com.example.findex.domain.Index_data.dto.ChartDataPoint;
-import com.example.findex.domain.Index_data.dto.IndexChartResponse;
-import com.example.findex.domain.Index_data.dto.PeriodType;
+import com.example.findex.domain.Index_data.dto.*;
 import com.example.findex.domain.Index_data.entity.IndexData;
 import com.example.findex.domain.Index_data.repository.IndexDataRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
@@ -29,17 +31,14 @@ public class IndexDataService {
     private final IndexDataRepository indexDataRepository;
 
     public IndexChartResponse getIndexChart(Long indexInfoId, PeriodType periodType) {
-        // 1. 지수 정보 조회
         IndexInfo indexInfo = indexInfoRepository.findById(indexInfoId)
                 .orElseThrow(() -> new EntityNotFoundException("IndexInfo not found with id: " + indexInfoId));
 
-        // 2. 기간에 따른 데이터 조회 날짜 범위 설정
         LocalDate endDate = LocalDate.now();
         LocalDate startDate = calculateStartDate(endDate, periodType);
 
-        // 3. 데이터 조회 (이동평균선 계산을 위해 20일치 데이터 추가 조회)
-        List<IndexData> indexDataList = indexDataRepository.findAllByIndexInfoIdAndBaseDateBetweenOrderByBaseDateAsc(
-                indexInfoId, startDate.minusDays(30), endDate // 넉넉하게 30일 이전 데이터부터 조회
+        List<IndexData> indexDataList = indexDataRepository.findAllByIndexInfo_IdAndBaseDateBetweenOrderByBaseDateAsc(
+                indexInfoId, startDate.minusDays(30), endDate
         );
 
         if (indexDataList.isEmpty()) {
@@ -47,7 +46,6 @@ public class IndexDataService {
                     Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
         }
 
-        // 4. DTO 변환 및 이동평균선 계산
         List<ChartDataPoint> dataPoints = new ArrayList<>();
         List<ChartDataPoint> ma5DataPoints = new ArrayList<>();
         List<ChartDataPoint> ma20DataPoints = new ArrayList<>();
@@ -55,14 +53,12 @@ public class IndexDataService {
         for (int i = 0; i < indexDataList.size(); i++) {
             IndexData currentData = indexDataList.get(i);
 
-            // 차트에 표시될 데이터 (조회 시작일 이후)
             if (!currentData.getBaseDate().isBefore(startDate)) {
                 if(currentData.getClosingPrice() != null) {
                     dataPoints.add(new ChartDataPoint(currentData.getBaseDate(), currentData.getClosingPrice().doubleValue()));
                 }
             }
 
-            // 5일 이동평균선 계산 (최소 5일치 데이터 필요)
             if (i >= 4) {
                 double ma5 = calculateMovingAverage(indexDataList, i, 5);
                 if (!currentData.getBaseDate().isBefore(startDate)) {
@@ -70,7 +66,6 @@ public class IndexDataService {
                 }
             }
 
-            // 20일 이동평균선 계산 (최소 20일치 데이터 필요)
             if (i >= 19) {
                 double ma20 = calculateMovingAverage(indexDataList, i, 20);
                  if (!currentData.getBaseDate().isBefore(startDate)) {
@@ -83,13 +78,58 @@ public class IndexDataService {
                 dataPoints, ma5DataPoints, ma20DataPoints);
     }
 
+    public IndexPerformanceRankingResponseDto getPerformanceRanking() {
+        List<IndexInfo> allIndices = indexInfoRepository.findAll();
+        List<IndexPerformanceRankingDto> performanceList = new ArrayList<>();
+
+        for (IndexInfo indexInfo : allIndices) {
+            Page<IndexData> dataPage = indexDataRepository.findTop2ByIndexInfoOrderByBaseDateDesc(indexInfo, PageRequest.of(0, 2));
+
+            if (dataPage.getContent().size() < 2) {
+                continue;
+            }
+
+            IndexData latestData = dataPage.getContent().get(0);
+            IndexData previousData = dataPage.getContent().get(1);
+
+            BigDecimal change = latestData.getClosingPrice().subtract(previousData.getClosingPrice());
+            double changePercent = 0.0;
+            if (previousData.getClosingPrice().compareTo(BigDecimal.ZERO) != 0) {
+                changePercent = change.divide(previousData.getClosingPrice(), 4, RoundingMode.HALF_UP).multiply(new BigDecimal(100)).doubleValue();
+            }
+
+            performanceList.add(IndexPerformanceRankingDto.builder()
+                    .symbol(indexInfo.getIndexName())
+                    .name(indexInfo.getIndexName())
+                    .currentPrice(latestData.getClosingPrice())
+                    .change(change)
+                    .changePercent(changePercent)
+                    .build());
+        }
+
+        performanceList.sort(Comparator.comparing(IndexPerformanceRankingDto::getChangePercent).reversed());
+
+        List<IndexPerformanceRankingDto> rankedList = new ArrayList<>();
+        for (int i = 0; i < performanceList.size(); i++) {
+            IndexPerformanceRankingDto dto = performanceList.get(i);
+            rankedList.add(IndexPerformanceRankingDto.builder()
+                    .ranking(i + 1)
+                    .symbol(dto.getSymbol())
+                    .name(dto.getName())
+                    .currentPrice(dto.getCurrentPrice())
+                    .change(dto.getChange())
+                    .changePercent(dto.getChangePercent())
+                    .build());
+        }
+
+        return new IndexPerformanceRankingResponseDto(rankedList);
+    }
+
     @Transactional
     public Long setupTestData() {
-        // 1. Clean up previous data
         indexDataRepository.deleteAllInBatch();
         indexInfoRepository.deleteAllInBatch();
 
-        // 2. Create IndexInfo
         IndexInfo indexInfo = IndexInfo.builder()
                 .indexClassification("Test Classification")
                 .indexName("Test Index")
@@ -102,7 +142,6 @@ public class IndexDataService {
         IndexInfo savedIndexInfo = indexInfoRepository.save(indexInfo);
         Long indexId = savedIndexInfo.getId();
 
-        // 3. Create IndexData for the last 30 days
         LocalDate today = LocalDate.now();
         Random random = new Random();
         List<IndexData> dataList = new ArrayList<>();
@@ -124,7 +163,7 @@ public class IndexDataService {
         return switch (periodType) {
             case WEEKLY -> endDate.minusWeeks(1);
             case MONTHLY -> endDate.minusMonths(1);
-            default -> endDate.minusDays(7); // DAILY 포함
+            default -> endDate.minusDays(7);
         };
     }
 
