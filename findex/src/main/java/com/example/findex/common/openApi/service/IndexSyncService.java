@@ -131,7 +131,7 @@ public class IndexSyncService {
                 } catch(Exception e) {
                     log.error("지수 '{}' 데이터 동기화 중 예외 발생", item.getIndexName(), e);
                     IndexInfo info = indexInfoRepository.findByIndexNameAndIndexClassification(item.getIndexName(), item.getIndexClassification()).orElse(null);
-                    result.add(new SyncResult(JobResult.FAILURE, info, e.getMessage(), parseLocalDate(item.getBaseDate())));
+                    result.add(new SyncResult(JobResult.FAILED, info, e.getMessage(), parseLocalDate(item.getBaseDate())));
                 }
             }
         }
