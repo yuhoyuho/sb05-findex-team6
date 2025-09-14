@@ -1,6 +1,5 @@
 package com.example.findex.domain.Index_data.service;
 
-import com.example.findex.common.base.SourceType;
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import com.example.findex.domain.Index_Info.repository.IndexInfoRepository;
 import com.example.findex.domain.Index_data.dto.ChartDataPoint;
@@ -16,23 +15,16 @@ import com.example.findex.domain.Index_data.mapper.IndexDataMapper;
 import com.example.findex.domain.Index_data.repository.IndexDataRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Base64;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -190,7 +182,7 @@ public class IndexDataService {
                 .orElseThrow(() -> new EntityNotFoundException("IndexInfo not found with id: " + indexInfoId));
 
         LocalDate endDate = LocalDate.now();
-        LocalDate startDate = calculateStartDate(endDate, periodType);
+        LocalDate startDate = calculateDate(endDate, periodType);
 
 
         List<IndexData> indexDataList = indexDataRepository.findAllByIndexInfo_IdAndBaseDateBetweenOrderByBaseDateAsc(
@@ -243,56 +235,76 @@ public class IndexDataService {
                 dataPoints, ma5DataPoints, ma20DataPoints);
     }
 
-    public IndexPerformanceRankingResponseDto getPerformanceRanking() {
-        List<IndexInfo> allIndices = indexInfoRepository.findAll();
-        List<IndexPerformanceRankingDto> performanceList = new ArrayList<>();
+    public List<RankedIndexPerformanceDto> getRankedPerformance(
+            Long indexInfoId, PeriodType periodType, int limit) {
 
-        for (IndexInfo indexInfo : allIndices) {
-            Page<IndexData> dataPage = indexDataRepository.findTop2ByIndexInfoOrderByBaseDateDesc(indexInfo, PageRequest.of(0, 2));
+        LocalDate latestDate = indexDataRepository.findLatestBaseDate();
+        if (latestDate == null) return List.of();
 
-            if (dataPage.getContent().size() < 2) {
-                continue;
-            }
+        LocalDate cutoff = calculateDate(latestDate, periodType);
 
-            IndexData latestData = dataPage.getContent().get(0);
-            IndexData previousData = dataPage.getContent().get(1);
+        List<IndexData> latestList = indexDataRepository.findLatestSnapshotAtOrBefore(latestDate, null);
+        List<IndexData> pastExactList = indexDataRepository.findSnapshotAtExactDate(cutoff, null);
 
-            BigDecimal change = latestData.getClosingPrice().subtract(previousData.getClosingPrice());
-            double changePercent = 0.0;
-            if (previousData.getClosingPrice().compareTo(BigDecimal.ZERO) != 0) {
-                changePercent = change.divide(previousData.getClosingPrice(), 4, RoundingMode.HALF_UP).multiply(new BigDecimal(100)).doubleValue();
-            }
+        Map<Long, IndexData> pastById = pastExactList.stream()
+                .collect(Collectors.toMap(d -> d.getIndexInfo().getId(), Function.identity(), (a,b)->a));
 
-            performanceList.add(IndexPerformanceRankingDto.builder()
-                    .symbol(indexInfo.getIndexName())
-                    .name(indexInfo.getIndexName())
-                    .currentPrice(latestData.getClosingPrice())
-                    .change(change)
-                    .changePercent(changePercent)
+        List<IndexPerformanceDto> performances = new ArrayList<>();
+
+        for (IndexData cur : latestList) {
+            Long id = cur.getIndexInfo().getId();
+
+            BigDecimal curPrice = cur.getClosingPrice();
+            if (curPrice == null) continue;
+
+            IndexData past = pastById.get(id);
+            BigDecimal pastPrice = (past != null ? past.getClosingPrice() : curPrice);
+            if (pastPrice == null) pastPrice = curPrice;
+
+            BigDecimal change = curPrice.subtract(pastPrice);
+            BigDecimal rate = (pastPrice.compareTo(BigDecimal.ZERO) == 0)
+                    ? BigDecimal.ZERO
+                    : change.divide(pastPrice, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
+
+            performances.add(IndexPerformanceDto.builder()
+                    .indexInfoId(id)
+                    .indexClassification(cur.getIndexInfo().getIndexClassification())
+                    .indexName(cur.getIndexInfo().getIndexName())
+                    .versus(change)
+                    .fluctuationRate(rate)
+                    .currentPrice(curPrice)
+                    .beforePrice(pastPrice)
                     .build());
         }
 
-        performanceList.sort(Comparator.comparing(IndexPerformanceRankingDto::getChangePercent).reversed());
+        performances.sort(Comparator.comparing(
+                IndexPerformanceDto::getFluctuationRate,
+                Comparator.nullsLast(BigDecimal::compareTo)
+        ).reversed());
 
-        List<IndexPerformanceRankingDto> rankedList = new ArrayList<>();
-        for (int i = 0; i < performanceList.size(); i++) {
-            IndexPerformanceRankingDto dto = performanceList.get(i);
-            rankedList.add(IndexPerformanceRankingDto.builder()
-                    .ranking(i + 1)
-                    .symbol(dto.getSymbol())
-                    .name(dto.getName())
-                    .currentPrice(dto.getCurrentPrice())
-                    .change(dto.getChange())
-                    .changePercent(dto.getChangePercent())
+        List<RankedIndexPerformanceDto> ranked = new ArrayList<>();
+        int rank = 1;
+        for (IndexPerformanceDto p : performances) {
+            ranked.add(RankedIndexPerformanceDto.builder()
+                    .rank(rank++)
+                    .performance(p)
                     .build());
         }
 
-        return new IndexPerformanceRankingResponseDto(rankedList);
+        if (indexInfoId != null) {
+            return ranked.stream()
+                    .filter(r -> r.getPerformance().getIndexInfoId().equals(indexInfoId))
+                    .toList();
+        }
+
+        return ranked.stream().limit(limit).toList();
     }
 
-
-    private LocalDate calculateStartDate(LocalDate endDate, PeriodType periodType) {
+    private LocalDate calculateDate(LocalDate endDate, PeriodType periodType) {
         return switch (periodType) {
+            case DAILY -> endDate.minusDays(1);
+            case WEEKLY -> endDate.minusDays(7);
             case YEARLY -> endDate.minusYears(1);
             case QUARTERLY -> endDate.minusMonths(3);
             default -> endDate.minusMonths(1);
