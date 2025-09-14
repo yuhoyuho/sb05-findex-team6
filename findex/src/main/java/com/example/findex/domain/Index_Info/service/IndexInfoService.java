@@ -1,6 +1,5 @@
 package com.example.findex.domain.Index_Info.service;
 
-import com.example.findex.common.base.SourceType;
 import com.example.findex.domain.Index_Info.dto.CursorPageResponseIndexInfoDto;
 import com.example.findex.domain.Index_Info.dto.IndexInfoCreateRequest;
 import com.example.findex.domain.Index_Info.dto.IndexInfoDto;
@@ -12,9 +11,6 @@ import com.example.findex.domain.Index_Info.repository.IndexInfoRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,6 +22,7 @@ public class IndexInfoService {
 
   // 전체조회
   public List<IndexInfoDto> findAll() {
+
     return mapper.toDtoList(repository.findAll());
   }
 
@@ -65,14 +62,19 @@ public class IndexInfoService {
         .toList();
   }
 
-  public CursorPageResponseIndexInfoDto findByCursor(Long cursor, int size) {
-    Pageable pageable = PageRequest.of(0, size, Sort.by("id").ascending());
-    List<IndexInfo> entities;
+  public CursorPageResponseIndexInfoDto findByCursorAndSortAndFilter(Long cursor, int size,
+      String sortField, String sortDirection, String filterField, String filterValue) {
 
-    if (cursor == null) {
-      entities = repository.findAllByOrderByIdAsc(pageable);
+    List<IndexInfo> entities = List.of();
+
+    if (filterField != null && filterValue != null) {
+      // 검색할 때
+      entities = repository.findByCursorAndFilter(null, size, sortField, sortDirection, filterField,
+          filterValue);
     } else {
-      entities = repository.findByIdGreaterThanOrderByIdAsc(cursor, pageable);
+      // 처음 조회
+      entities = repository.findByCursorAndFilter(cursor, size, sortField, sortDirection, null,
+          null);
     }
 
     List<IndexInfoDto> content = entities.stream()

@@ -13,7 +13,7 @@ public interface AutoSyncRepository extends JpaRepository<AutoSync, Long> {
 
     @Query("""
     select a from AutoSync a
-    join a.indexInfo info
+    join fetch a.indexInfo info
     where (:indexInfoId is null or info.id = :indexInfoId)
     and (:enabled is null or a.enabled = :enabled)
     """)
@@ -25,7 +25,7 @@ public interface AutoSyncRepository extends JpaRepository<AutoSync, Long> {
 
     @Query("""
     select a from AutoSync a
-    join a.indexInfo info
+    join fetch a.indexInfo info
     where (:indexInfoId is null or info.id = :indexInfoId)
     and (:enabled is null or a.enabled = :enabled)
     and info.id > :cursorIndexId
@@ -39,7 +39,7 @@ public interface AutoSyncRepository extends JpaRepository<AutoSync, Long> {
 
     @Query("""
     select a from AutoSync a
-    join a.indexInfo info
+    join fetch a.indexInfo info
     where (:indexInfoId is null or info.id = :indexInfoId)
     and (:enabled is null or a.enabled = :enabled)
     and info.id < :cursorIndexId
