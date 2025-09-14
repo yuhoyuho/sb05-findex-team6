@@ -1,11 +1,13 @@
 package com.example.findex.domain.Index_data.repository.impl;
 
 import com.example.findex.domain.Index_data.entity.IndexData;
+import com.example.findex.domain.Index_data.entity.QIndexData;
 import com.example.findex.domain.Index_data.repository.IndexDataRepositoryCustom;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.NumberPath;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -16,8 +18,8 @@ import java.util.Base64;
 import java.util.List;
 
 import static com.example.findex.domain.Auto_Sync.entity.QAutoSync.autoSync;
-import static com.example.findex.domain.Index_data.entity.QIndexData.indexData;
 import static com.example.findex.domain.Index_Info.entity.QIndexInfo.indexInfo;
+import static com.example.findex.domain.Index_data.entity.QIndexData.indexData;
 
 @Repository
 @RequiredArgsConstructor
@@ -55,6 +57,61 @@ public class IndexDataRepositoryImpl implements IndexDataRepositoryCustom {
                 .orderBy(buildOrderSpecifier(sortField, sortDirection))
                 .limit(size + 1)
                 .fetch();
+    }
+
+    @Override
+    public List<IndexData> findLatestSnapshotAtOrBefore(LocalDate cutoff, Long indexInfoId) {
+        QIndexData sub = new QIndexData("sub");
+
+        BooleanBuilder where = new BooleanBuilder();
+
+        if (indexInfoId != null) {
+            where.and(indexData.indexInfo.id.eq(indexInfoId));
+        }
+
+        return queryFactory
+                .selectFrom(indexData)
+                .join(indexData.indexInfo).fetchJoin()
+                .where(
+                        where,
+                        indexData.baseDate.eq(
+                                JPAExpressions
+                                        .select(sub.baseDate.max())
+                                        .from(sub)
+                                        .where(
+                                                sub.indexInfo.id.eq(indexData.indexInfo.id)
+                                                        .and(sub.baseDate.loe(cutoff))
+                                                        .and(indexInfoId != null
+                                                                ? sub.indexInfo.id.eq(indexInfoId)
+                                                                : null)
+                                        )
+                        )
+                )
+                .fetch();
+    }
+
+    @Override
+    public List<IndexData> findSnapshotAtExactDate(LocalDate date, Long indexInfoId) {
+        BooleanBuilder where = new BooleanBuilder()
+                .and(indexData.baseDate.eq(date));
+
+        if (indexInfoId != null) {
+            where.and(indexData.indexInfo.id.eq(indexInfoId));
+        }
+
+        return queryFactory
+                .selectFrom(indexData)
+                .join(indexData.indexInfo).fetchJoin()
+                .where(where)
+                .fetch();
+    }
+
+    @Override
+    public LocalDate findLatestBaseDate() {
+        return queryFactory
+                .select(indexData.baseDate.max())
+                .from(indexData)
+                .fetchOne();
     }
 
     private BooleanExpression buildCursorCondition(String cursor, Long idAfter, String sortField, String sortDirection) {

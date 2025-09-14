@@ -1,6 +1,5 @@
 package com.example.findex.domain.Index_data.service;
 
-import com.example.findex.common.base.SourceType;
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import com.example.findex.domain.Index_Info.repository.IndexInfoRepository;
 import com.example.findex.domain.Index_data.dto.ChartDataPoint;
@@ -10,24 +9,22 @@ import com.example.findex.domain.Index_data.dto.IndexDataCreateRequest;
 import com.example.findex.domain.Index_data.dto.IndexDataDto;
 import com.example.findex.domain.Index_data.dto.IndexDataUpdateRequest;
 import com.example.findex.domain.Index_data.dto.PeriodType;
+import com.example.findex.domain.Index_data.dto.*;
 import com.example.findex.domain.Index_data.entity.IndexData;
 import com.example.findex.domain.Index_data.mapper.IndexDataMapper;
 import com.example.findex.domain.Index_data.repository.IndexDataRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Base64;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -181,16 +178,14 @@ public class IndexDataService {
 
     @Transactional(readOnly = true)
     public IndexChartResponse getIndexChart(Long indexInfoId, PeriodType periodType) {
-        // 1. 지수 정보 조회
         IndexInfo indexInfo = indexInfoRepository.findById(indexInfoId)
                 .orElseThrow(() -> new EntityNotFoundException("IndexInfo not found with id: " + indexInfoId));
 
-        // 2. 기간에 따른 데이터 조회 날짜 범위 설정
         LocalDate endDate = LocalDate.now();
-        LocalDate startDate = calculateStartDate(endDate, periodType);
+        LocalDate startDate = calculateDate(endDate, periodType);
 
-        // 3. 데이터 조회 - ASC로 조회 (이동평균 계산을 위해)
-        List<IndexData> indexDataList = indexDataRepository.findAllByIndexInfoIdAndBaseDateBetweenOrderByBaseDateAsc(
+
+        List<IndexData> indexDataList = indexDataRepository.findAllByIndexInfo_IdAndBaseDateBetweenOrderByBaseDateAsc(
                 indexInfoId, startDate.minusDays(30), endDate
         );
 
@@ -240,8 +235,76 @@ public class IndexDataService {
                 dataPoints, ma5DataPoints, ma20DataPoints);
     }
 
-    private LocalDate calculateStartDate(LocalDate endDate, PeriodType periodType) {
+    public List<RankedIndexPerformanceDto> getRankedPerformance(
+            Long indexInfoId, PeriodType periodType, int limit) {
+
+        LocalDate latestDate = indexDataRepository.findLatestBaseDate();
+        if (latestDate == null) return List.of();
+
+        LocalDate cutoff = calculateDate(latestDate, periodType);
+
+        List<IndexData> latestList = indexDataRepository.findLatestSnapshotAtOrBefore(latestDate, null);
+        List<IndexData> pastExactList = indexDataRepository.findSnapshotAtExactDate(cutoff, null);
+
+        Map<Long, IndexData> pastById = pastExactList.stream()
+                .collect(Collectors.toMap(d -> d.getIndexInfo().getId(), Function.identity(), (a,b)->a));
+
+        List<IndexPerformanceDto> performances = new ArrayList<>();
+
+        for (IndexData cur : latestList) {
+            Long id = cur.getIndexInfo().getId();
+
+            BigDecimal curPrice = cur.getClosingPrice();
+            if (curPrice == null) continue;
+
+            IndexData past = pastById.get(id);
+            BigDecimal pastPrice = (past != null ? past.getClosingPrice() : curPrice);
+            if (pastPrice == null) pastPrice = curPrice;
+
+            BigDecimal change = curPrice.subtract(pastPrice);
+            BigDecimal rate = (pastPrice.compareTo(BigDecimal.ZERO) == 0)
+                    ? BigDecimal.ZERO
+                    : change.divide(pastPrice, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
+
+            performances.add(IndexPerformanceDto.builder()
+                    .indexInfoId(id)
+                    .indexClassification(cur.getIndexInfo().getIndexClassification())
+                    .indexName(cur.getIndexInfo().getIndexName())
+                    .versus(change)
+                    .fluctuationRate(rate)
+                    .currentPrice(curPrice)
+                    .beforePrice(pastPrice)
+                    .build());
+        }
+
+        performances.sort(Comparator.comparing(
+                IndexPerformanceDto::getFluctuationRate,
+                Comparator.nullsLast(BigDecimal::compareTo)
+        ).reversed());
+
+        List<RankedIndexPerformanceDto> ranked = new ArrayList<>();
+        int rank = 1;
+        for (IndexPerformanceDto p : performances) {
+            ranked.add(RankedIndexPerformanceDto.builder()
+                    .rank(rank++)
+                    .performance(p)
+                    .build());
+        }
+
+        if (indexInfoId != null) {
+            return ranked.stream()
+                    .filter(r -> r.getPerformance().getIndexInfoId().equals(indexInfoId))
+                    .toList();
+        }
+
+        return ranked.stream().limit(limit).toList();
+    }
+
+    private LocalDate calculateDate(LocalDate endDate, PeriodType periodType) {
         return switch (periodType) {
+            case DAILY -> endDate.minusDays(1);
+            case WEEKLY -> endDate.minusDays(7);
             case YEARLY -> endDate.minusYears(1);
             case QUARTERLY -> endDate.minusMonths(3);
             default -> endDate.minusMonths(1);
