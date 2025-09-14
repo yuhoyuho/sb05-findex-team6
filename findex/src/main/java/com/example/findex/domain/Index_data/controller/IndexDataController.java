@@ -1,12 +1,6 @@
 package com.example.findex.domain.Index_data.controller;
 
-import com.example.findex.domain.Index_data.dto.CursorPageResponseIndexDataDto;
-import com.example.findex.domain.Index_data.dto.IndexChartResponse;
-import com.example.findex.domain.Index_data.dto.RankedIndexPerformanceDto;
-import com.example.findex.domain.Index_data.dto.IndexDataCreateRequest;
-import com.example.findex.domain.Index_data.dto.IndexDataDto;
-import com.example.findex.domain.Index_data.dto.IndexDataUpdateRequest;
-import com.example.findex.domain.Index_data.dto.PeriodType;
+import com.example.findex.domain.Index_data.dto.*;
 import com.example.findex.domain.Index_data.service.IndexDataService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -93,5 +87,13 @@ public class IndexDataController {
             @RequestParam(defaultValue = "10") Integer limit) {
         List<RankedIndexPerformanceDto> responseDto = indexDataService.getRankedPerformance(indexInfoId, periodType, limit);
         return ResponseEntity.ok(responseDto);
+    }
+
+    @GetMapping("/performance/favorite")
+    public ResponseEntity<List<IndexPerformanceDto>> getFavoritePerformance(
+            @RequestParam(defaultValue = "DAILY") PeriodType periodType
+    ) {
+        List<IndexPerformanceDto> body = indexDataService.getFavoritePerformance(periodType);
+        return ResponseEntity.ok(body);
     }
 }

@@ -4,6 +4,7 @@ import com.example.findex.domain.Index_data.entity.IndexData;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 public interface IndexDataRepositoryCustom {
 
@@ -17,10 +18,7 @@ public interface IndexDataRepositoryCustom {
             Long idAfter,
             Integer size
     );
+    List<IndexData> findLatestSnapshotInRange(LocalDate start, LocalDate end, Set<Long> indexIds);
 
-    List<IndexData> findLatestSnapshotAtOrBefore(LocalDate cutoff, Long indexInfoId);
-
-    List<IndexData> findSnapshotAtExactDate(LocalDate date, Long indexInfoId);
-
-    LocalDate findLatestBaseDate();
+    List<IndexData> findEarliestSnapshotInRange(LocalDate start, LocalDate end, Set<Long> indexIds);
 }
