@@ -70,7 +70,7 @@ public class IndexInfoService {
 
   // summaries (id, classification, name)
   public List<IndexInfoSummaryDto> findSummaries() {
-    return repository.findAll().stream()
+    return repository.findAllWithAutoSync().stream()
         .map(mapper::toSummaryDto)
         .toList();
   }
@@ -112,8 +112,8 @@ public class IndexInfoService {
             nextCursor = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
         }
 
-        String cls = indexClassification == null ? "" : indexClassification;
-        String name = indexName == null ? "" : indexName;
+        String cls = indexClassification == null ? "" : indexClassification.toLowerCase();
+        String name = indexName == null ? "" : indexName.toLowerCase();
 
         long totalElements;
         if (cls.isEmpty() && name.isEmpty() && favorite == null) {

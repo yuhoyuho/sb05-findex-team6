@@ -23,12 +23,15 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo, Long>, Ind
     // 정렬 조건을 Pageable로 전달받는 버전 (asc/desc 동적으로 적용 가능)
     List<IndexInfo> findByIdGreaterThan(Long id,Pageable pageable);
 
+    @Query("SELECT i FROM IndexInfo i LEFT JOIN FETCH i.autoSync")
+    List<IndexInfo> findAllWithAutoSync();
+
     @Query("""
     select count(i)
     from IndexInfo i
-    where (:cls = '' or i.indexClassification like concat('%', :cls, '%'))
-      and (:name = '' or i.indexName like concat('%', :name, '%'))
-      and (:fav is null or i.favorite = :fav)
+    where (:cls = '' or lower(i.indexClassification) like concat('%', :cls, '%'))
+          and (:name = '' or lower(i.indexName) like concat('%', :name, '%'))
+          and (:fav is null or i.favorite = :fav)
 """)
     long countByFilter(String cls, String name, Boolean fav);
 
