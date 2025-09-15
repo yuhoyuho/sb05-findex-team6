@@ -37,10 +37,12 @@ public class IndexInfoRepositoryImpl implements IndexInfoRepositoryCustom {
         NumberPath<Long> id = root.getNumber("id", Long.class);
 
         BooleanBuilder where = new BooleanBuilder();
-        if (indexClassification != null)
-            where.and(root.getString("indexClassification").like("%" + indexClassification + "%"));
-        if (indexName != null)
-            where.and(root.getString("indexName").like("%" + indexName + "%"));
+        if (indexClassification != null && !indexClassification.isBlank())
+            where.and(root.getString("indexClassification")
+                    .containsIgnoreCase(indexClassification));
+        if (indexName != null && !indexName.isBlank())
+            where.and(root.getString("indexName")
+                    .containsIgnoreCase(indexName));
         if (favorite != null)
             where.and(root.getBoolean("favorite").eq(favorite));
 

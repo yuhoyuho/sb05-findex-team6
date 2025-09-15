@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 
-@Component
+//@Component
 @RequiredArgsConstructor
 @Slf4j
 public class Test implements CommandLineRunner {
@@ -27,8 +27,11 @@ public class Test implements CommandLineRunner {
 
         try {
             // IndexSyncService의 메서드를 직접 호출합니다.
-            indexSyncService.syncDailyData(testDate);
-            log.info("✅ 테스트가 성공적으로 실행되었습니다. 위 로그를 확인해주세요.");
+            for (int i = 1; i <= 1600; i++) {
+                indexSyncService.syncDailyData(testDate);
+                testDate = testDate.minusDays(1);
+            }
+
         } catch (Exception e) {
             log.error("❌ 테스트 실행 중 예외가 발생했습니다.", e);
         }
