@@ -35,7 +35,7 @@ public class IndexInfoController {
   }
   @GetMapping
   public ResponseEntity<CursorPageResponseIndexInfoDto> findAll(
-      @RequestParam(required = false) Long cursor,
+      @RequestParam(required = false) String cursor,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(required = false) String sortField,
       @RequestParam(required = false) String sortDirection,
@@ -47,7 +47,7 @@ public class IndexInfoController {
 
 
     CursorPageResponseIndexInfoDto response =
-        service.findByCursorAndSortAndFilter(cursor, size, sortField, sortDirection,indexClassification,indexName,favorite);
+        service.findByCursorAndFilter(cursor, size, sortField, sortDirection,indexClassification,indexName,favorite);
 
     return ResponseEntity.ok(response);
   }
