@@ -32,30 +32,26 @@ public class AutoSyncService {
         sortDirection?: 'asc' | 'desc';
          */
         Long cursorIndexId = null;
+
         if(cursor != null && !cursor.isEmpty()) {
             cursorIndexId = Long.parseLong(cursor);
+            // 현재 커서 위치의 정렬 필드값 조회
         } else if(idAfter != null) {
             cursorIndexId = idAfter;
         }
 
-        Sort.Direction direction = sortDirection.equalsIgnoreCase("asc")
-                ? Sort.Direction.ASC : Sort.Direction.DESC;
+        String sortProperty = sortField.equals("indexName")
+                ? "indexInfo.indexName"
+                : "enabled";
 
-        Pageable pageable = PageRequest.of(0, size+1, Sort.by(direction,
-                sortField.equals("indexName") ? "indexInfo.indexName" :
-                        sortField.equals("enabled")   ? "enabled" :
-                                "indexInfo.id"
-        ));
+        Pageable pageable = PageRequest.of(0, size+1,
+                Sort.by(Sort.Direction.ASC,sortProperty));
 
         Slice<AutoSync> slice;
         if (cursorIndexId == null) {
             slice = autoSyncRepository.findFirstPageByConditions(indexInfoId, enabled, pageable);
         } else {
-            if (direction == Sort.Direction.ASC) {
-                slice = autoSyncRepository.findAfterCursorAsc(indexInfoId, enabled, cursorIndexId, pageable);
-            } else {
-                slice = autoSyncRepository.findAfterCursorDesc(indexInfoId, enabled, cursorIndexId, pageable);
-            }
+            slice = autoSyncRepository.findAfterCursorAsc(indexInfoId, enabled, cursorIndexId,  pageable);
         }
 
         List<AutoSync> autoSyncs = slice.getContent();
@@ -73,6 +69,8 @@ public class AutoSyncService {
             nextCursor = String.valueOf(nextIdAfter);
         }
 
+        Long totalElements = autoSyncRepository.count();
+
         List<AutoSyncConfigDto> ActualContents = actualContent.stream()
                 .map(autoSyncMapper::toDto)
                 .toList();
@@ -82,7 +80,7 @@ public class AutoSyncService {
                 nextCursor,      // indexInfo.id 문자열
                 nextIdAfter,     // indexInfo.id 숫자값
                 size,
-                (long) ActualContents.size(),
+                totalElements,
                 hasNext
         );
     }
