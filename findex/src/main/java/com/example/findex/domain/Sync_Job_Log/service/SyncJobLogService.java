@@ -9,6 +9,7 @@ import com.example.findex.domain.Sync_Job_Log.entity.SyncJobLog;
 import com.example.findex.domain.Sync_Job_Log.mapper.SyncJobLogMapper;
 import com.example.findex.domain.Sync_Job_Log.repository.SyncJobLogRepository;
 import com.example.findex.domain.Sync_Job_Log.repository.SyncJobLogRepositoryCustom;
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -64,7 +65,47 @@ public class SyncJobLogService implements SyncJobLogRepositoryCustom {
         // entity -> dto
         List<SyncJobLogDto> list = syncJobLogMapper.toDtoList(result.content());
 
-        return new CursorPageResponse<>(list, result.nextCursor(), result.size(), result.hasNext());
+        return new CursorPageResponse<>(
+                list,
+                result.nextCursor(),
+                result.size(),
+                result.totalElements(),
+                result.hasNext());
+    }
+
+    @Transactional(readOnly = true)
+    public SyncJobSummaryDto getSyncJobSummary() {
+        QSyncJobLog syncJobLog = QSyncJobLog.syncJobLog;
+        LocalDateTime oneWeekAgo = LocalDateTime.now().minusWeeks(1);
+
+        Long successCount = queryFactory
+                .select(syncJobLog.count())
+                .from(syncJobLog)
+                .where(
+                        syncJobLog.result.in(JobResult.SUCCESS),
+                        syncJobLog.jobTime.after(oneWeekAgo)
+                )
+                .fetchOne();
+
+        Long failedCount = queryFactory
+                .select(syncJobLog.count())
+                .from(syncJobLog)
+                .where(
+                        syncJobLog.result.eq(JobResult.FAILED),
+                        syncJobLog.jobTime.after(oneWeekAgo)
+                )
+                .fetchOne();
+
+        LocalDateTime lastSyncTime = queryFactory
+                .select(syncJobLog.jobTime.max())
+                .from(syncJobLog)
+                .fetchOne();
+
+        return new SyncJobSummaryDto(
+                successCount != null ? successCount : 0L,
+                failedCount != null ? failedCount : 0L,
+                lastSyncTime
+        );
     }
 
     /**
@@ -101,17 +142,32 @@ public class SyncJobLogService implements SyncJobLogRepositoryCustom {
         QSyncJobLog syncJobLog = QSyncJobLog.syncJobLog;
 
         int size = params.getSize();
+        BooleanBuilder condition = createFilterConditions(params);
+
+        Long totalElements = queryFactory
+                .select(syncJobLog.count())
+                .from(syncJobLog)
+                .where(condition)
+                .fetchOne();
+
+//        List<SyncJobLog> content = queryFactory
+//                .selectFrom(syncJobLog)
+//                .where(
+//                        jobTypeEq(params.getJobType()),
+//                        indexInfoIdEq(params.getIndexInfoId()),
+//                        baseDateBetween(params.getBaseDateFrom(), params.getBaseDateTo()),
+//                        workerEq(params.getWorker()),
+//                        jobTimeBetween(params.getJobTimeFrom(), params.getJobTimeTo()),
+//                        statusEq(params.getStatus()),
+//                        cursorCondition(params.getCursor(), params.getSortField(), params.getSortDirection())
+//                )
+//                .orderBy(getOrderSpecifiers(params.getSortField(), params.getSortDirection()))
+//                .limit(size + 1)
+//                .fetch();
+
         List<SyncJobLog> content = queryFactory
                 .selectFrom(syncJobLog)
-                .where(
-                        jobTypeEq(params.getJobType()),
-                        indexInfoIdEq(params.getIndexInfoId()),
-                        baseDateBetween(params.getBaseDateFrom(), params.getBaseDateTo()),
-                        workerEq(params.getWorker()),
-                        jobTimeBetween(params.getJobTimeFrom(), params.getJobTimeTo()),
-                        statusEq(params.getStatus()),
-                        cursorCondition(params.getCursor(), params.getSortField(), params.getSortDirection())
-                )
+                .where(condition, cursorCondition(params.getCursor(), params.getSortField(), params.getSortDirection()))
                 .orderBy(getOrderSpecifiers(params.getSortField(), params.getSortDirection()))
                 .limit(size + 1)
                 .fetch();
@@ -124,10 +180,22 @@ public class SyncJobLogService implements SyncJobLogRepositoryCustom {
             nextCursor = generateCursor(lastElement, params.getSortField());
         }
 
-        return new CursorPageResponse<>(content, nextCursor, size, hasNext);
+        return new CursorPageResponse<>(content, nextCursor, size, totalElements, hasNext);
     }
 
     // --- 동적 WHERE 절을 위한 헬퍼 메서드들 ---
+
+    // 💡 [추가] 필터 조건 생성 로직을 별도 메서드로 분리하여 재사용
+    private BooleanBuilder createFilterConditions(SyncJobQueryParams params) {
+        BooleanBuilder builder = new BooleanBuilder();
+        builder.and(jobTypeEq(params.getJobType()));
+        builder.and(indexInfoIdEq(params.getIndexInfoId()));
+        builder.and(baseDateBetween(params.getBaseDateFrom(), params.getBaseDateTo()));
+        builder.and(workerEq(params.getWorker()));
+        builder.and(jobTimeBetween(params.getJobTimeFrom(), params.getJobTimeTo()));
+        builder.and(statusEq(params.getStatus()));
+        return builder;
+    }
 
     private BooleanExpression jobTypeEq(JobType jobType) {
         return jobType != null ? QSyncJobLog.syncJobLog.jobType.eq(jobType) : null;

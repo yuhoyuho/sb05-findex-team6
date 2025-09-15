@@ -3,9 +3,11 @@ package com.example.findex.domain.Index_data.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 
 public enum PeriodType {
-    YEARLY,
+    DAILY,
+    WEEKLY,
+    MONTHLY,
     QUARTERLY,
-    MONTHLY;
+    YEARLY;
 
     @JsonCreator
     public static PeriodType fromString(String value) {

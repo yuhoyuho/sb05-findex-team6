@@ -2,19 +2,20 @@ package com.example.findex.domain.Index_data.controller;
 
 import com.example.findex.domain.Index_data.dto.CursorPageResponseIndexDataDto;
 import com.example.findex.domain.Index_data.dto.IndexChartResponse;
+import com.example.findex.domain.Index_data.dto.RankedIndexPerformanceDto;
 import com.example.findex.domain.Index_data.dto.IndexDataCreateRequest;
 import com.example.findex.domain.Index_data.dto.IndexDataDto;
 import com.example.findex.domain.Index_data.dto.IndexDataUpdateRequest;
 import com.example.findex.domain.Index_data.dto.PeriodType;
 import com.example.findex.domain.Index_data.service.IndexDataService;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.annotations.Parameter;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -75,14 +76,22 @@ public class IndexDataController {
                 .header("Content-Disposition", "attachment; filename=index_data.csv")
                 .body("\uFEFF" + csvContent);
     }
-                
+
     @GetMapping("/{id}/chart")
     public ResponseEntity<IndexChartResponse> getIndexChart(
             @PathVariable Long id,
             @RequestParam(defaultValue = "DAILY") PeriodType periodType) {
-        
+
         IndexChartResponse response = indexDataService.getIndexChart(id, periodType);
         return ResponseEntity.ok(response);
+    }
 
+    @GetMapping("/performance/rank")
+    public ResponseEntity<List<RankedIndexPerformanceDto>> getPerformanceRanking(
+            @RequestParam(required = false) Long indexInfoId,
+            @RequestParam(defaultValue = "DAILY") PeriodType periodType,
+            @RequestParam(defaultValue = "10") Integer limit) {
+        List<RankedIndexPerformanceDto> responseDto = indexDataService.getRankedPerformance(indexInfoId, periodType, limit);
+        return ResponseEntity.ok(responseDto);
     }
 }
