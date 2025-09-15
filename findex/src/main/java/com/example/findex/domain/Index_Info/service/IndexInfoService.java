@@ -9,6 +9,9 @@ import com.example.findex.domain.Index_Info.entity.IndexInfo;
 import com.example.findex.domain.Index_Info.mapper.IndexInfoMapper;
 import com.example.findex.domain.Index_Info.repository.IndexInfoRepository;
 import jakarta.persistence.EntityNotFoundException;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -67,25 +70,67 @@ public class IndexInfoService {
         .toList();
   }
 
-  public CursorPageResponseIndexInfoDto findByCursorAndSortAndFilter(Long cursor, int size,
-      String sortField, String sortDirection, String indexClassification, String indexName, Boolean favorite) {
+    public CursorPageResponseIndexInfoDto findByCursorAndFilter(
+            String cursor,
+            int size,
+            String sortField,
+            String sortDirection,
+            String indexClassification,
+            String indexName,
+            Boolean favorite
+    ) {
 
-    List<IndexInfo> entities = repository.findByCursorAndFilter(cursor,size,sortField,sortDirection,indexClassification,indexName,favorite);
+        List<IndexInfo> entities = repository.findByCursorAndFilter(
+                cursor, size, sortField, sortDirection,
+                indexClassification, indexName, favorite
+        );
 
-    List<IndexInfoDto> content = entities.stream()
-        .map(mapper::toDto)
-        .toList();
+        boolean hasNext = entities.size() > size;
+        if (hasNext) {
+            entities = entities.subList(0, size);
+        }
 
-    Long nexIdAfter = content.isEmpty() ? null : content.get(content.size() - 1).id();
-    boolean hasNext = entities.size() == size;
+        List<IndexInfoDto> content = entities.stream()
+                .map(mapper::toDto)
+                .toList();
 
-    return CursorPageResponseIndexInfoDto.builder()
-        .content(content)
-        .nextCursor(nexIdAfter != null ? String.valueOf(nexIdAfter) : null)
-        .nextIdAfter(nexIdAfter)
-        .size(content.size())
-        .totalElements(repository.count())
-        .hasNext(hasNext)
-        .build();
-  }
+        Long nextIdAfter = content.isEmpty() ? null : content.get(content.size() - 1).id();
+
+        String nextCursor = null;
+        if (!content.isEmpty()) {
+            IndexInfo last = entities.get(entities.size() - 1);
+            String sortValue = extractSortValue(last, sortField);
+            String json = String.format(
+                    "{\"%s\":\"%s\",\"id\":%d}",
+                    sortField, sortValue, last.getId()
+            );
+            nextCursor = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
+        }
+
+        String cls = indexClassification == null ? "" : indexClassification;
+        String name = indexName == null ? "" : indexName;
+
+        long totalElements;
+        if (cls.isEmpty() && name.isEmpty() && favorite == null) {
+            totalElements = repository.count(); // 전체
+        } else {
+            totalElements = repository.countByFilter(cls, name, favorite);
+        }
+
+        return CursorPageResponseIndexInfoDto.builder()
+                .content(content)
+                .nextCursor(nextCursor)
+                .nextIdAfter(nextIdAfter)
+                .size(size)
+                .totalElements(totalElements)
+                .hasNext(hasNext)
+                .build();
+    }
+
+    private String extractSortValue(IndexInfo entity, String sortField) {
+        return switch (sortField) {
+            case "indexClassification" -> entity.getIndexClassification();
+            default -> String.valueOf(entity.getId());
+        };
+    }
 }

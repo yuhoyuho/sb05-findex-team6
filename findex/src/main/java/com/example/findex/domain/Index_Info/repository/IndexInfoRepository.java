@@ -1,11 +1,12 @@
 package com.example.findex.domain.Index_Info.repository;
 
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
-import java.util.List;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface IndexInfoRepository extends JpaRepository<IndexInfo, Long>, IndexInfoRepositoryCustom {
@@ -21,5 +22,14 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo, Long>, Ind
 
     // 정렬 조건을 Pageable로 전달받는 버전 (asc/desc 동적으로 적용 가능)
     List<IndexInfo> findByIdGreaterThan(Long id,Pageable pageable);
+
+    @Query("""
+    select count(i)
+    from IndexInfo i
+    where (:cls = '' or i.indexClassification like concat('%', :cls, '%'))
+      and (:name = '' or i.indexName like concat('%', :name, '%'))
+      and (:fav is null or i.favorite = :fav)
+""")
+    long countByFilter(String cls, String name, Boolean fav);
 
 }
