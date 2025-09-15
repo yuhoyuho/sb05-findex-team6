@@ -1,5 +1,6 @@
 package com.example.findex.domain.Index_Info.service;
 
+import com.example.findex.domain.Auto_Sync.service.AutoSyncService;
 import com.example.findex.domain.Index_Info.dto.CursorPageResponseIndexInfoDto;
 import com.example.findex.domain.Index_Info.dto.IndexInfoCreateRequest;
 import com.example.findex.domain.Index_Info.dto.IndexInfoDto;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class IndexInfoService {
 
+  private final AutoSyncService autoSyncService;
   private final IndexInfoRepository repository;
   private final IndexInfoMapper mapper;
 
@@ -40,7 +42,10 @@ public class IndexInfoService {
   public IndexInfoDto create(IndexInfoCreateRequest request) {
     IndexInfo entity = mapper.toEntity(request);
 
-    return mapper.toDto(repository.save(entity));
+    repository.save(entity);
+    autoSyncService.create(entity); // [자동 연동 설정] 생성
+
+    return mapper.toDto(entity);
   }
 
   // 수정
