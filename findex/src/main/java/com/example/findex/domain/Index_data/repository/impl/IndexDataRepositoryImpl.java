@@ -1,3 +1,4 @@
+// com/example/findex/domain/Index_data/repository/impl/IndexDataRepositoryImpl.java
 package com.example.findex.domain.Index_data.repository.impl;
 
 import com.example.findex.domain.Index_data.entity.IndexData;
@@ -16,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Base64;
 import java.util.List;
+import java.util.Set;
 
 import static com.example.findex.domain.Auto_Sync.entity.QAutoSync.autoSync;
 import static com.example.findex.domain.Index_Info.entity.QIndexInfo.indexInfo;
@@ -33,7 +35,6 @@ public class IndexDataRepositoryImpl implements IndexDataRepositoryCustom {
             String sortField, String sortDirection, String cursor, Long idAfter, Integer size) {
 
         BooleanBuilder whereClause = new BooleanBuilder();
-        
         if (indexInfoId != null) {
             whereClause.and(indexData.indexInfo.id.eq(indexInfoId));
         }
@@ -60,18 +61,15 @@ public class IndexDataRepositoryImpl implements IndexDataRepositoryCustom {
     }
 
     @Override
-    public List<IndexData> findLatestSnapshotAtOrBefore(LocalDate cutoff, Long indexInfoId) {
+    public List<IndexData> findLatestSnapshotInRange(LocalDate start, LocalDate end, Set<Long> indexIds) {
         QIndexData sub = new QIndexData("sub");
-
         BooleanBuilder where = new BooleanBuilder();
-
-        if (indexInfoId != null) {
-            where.and(indexData.indexInfo.id.eq(indexInfoId));
+        if (indexIds != null && !indexIds.isEmpty()) {
+            where.and(indexData.indexInfo.id.in(indexIds));
         }
-
         return queryFactory
                 .selectFrom(indexData)
-                .join(indexData.indexInfo).fetchJoin()
+                .join(indexData.indexInfo, indexInfo).fetchJoin()
                 .where(
                         where,
                         indexData.baseDate.eq(
@@ -80,9 +78,10 @@ public class IndexDataRepositoryImpl implements IndexDataRepositoryCustom {
                                         .from(sub)
                                         .where(
                                                 sub.indexInfo.id.eq(indexData.indexInfo.id)
-                                                        .and(sub.baseDate.loe(cutoff))
-                                                        .and(indexInfoId != null
-                                                                ? sub.indexInfo.id.eq(indexInfoId)
+                                                        .and(sub.baseDate.goe(start))
+                                                        .and(sub.baseDate.loe(end))
+                                                        .and(indexIds != null && !indexIds.isEmpty()
+                                                                ? sub.indexInfo.id.in(indexIds)
                                                                 : null)
                                         )
                         )
@@ -91,18 +90,31 @@ public class IndexDataRepositoryImpl implements IndexDataRepositoryCustom {
     }
 
     @Override
-    public List<IndexData> findSnapshotAtExactDate(LocalDate date, Long indexInfoId) {
-        BooleanBuilder where = new BooleanBuilder()
-                .and(indexData.baseDate.eq(date));
-
-        if (indexInfoId != null) {
-            where.and(indexData.indexInfo.id.eq(indexInfoId));
+    public List<IndexData> findEarliestSnapshotInRange(LocalDate start, LocalDate end, Set<Long> indexIds) {
+        QIndexData sub = new QIndexData("sub");
+        BooleanBuilder where = new BooleanBuilder();
+        if (indexIds != null && !indexIds.isEmpty()) {
+            where.and(indexData.indexInfo.id.in(indexIds));
         }
-
         return queryFactory
                 .selectFrom(indexData)
-                .join(indexData.indexInfo).fetchJoin()
-                .where(where)
+                .join(indexData.indexInfo, indexInfo).fetchJoin()
+                .where(
+                        where,
+                        indexData.baseDate.eq(
+                                JPAExpressions
+                                        .select(sub.baseDate.min())
+                                        .from(sub)
+                                        .where(
+                                                sub.indexInfo.id.eq(indexData.indexInfo.id)
+                                                        .and(sub.baseDate.goe(start))
+                                                        .and(sub.baseDate.loe(end))
+                                                        .and(indexIds != null && !indexIds.isEmpty()
+                                                                ? sub.indexInfo.id.in(indexIds)
+                                                                : null)
+                                        )
+                        )
+                )
                 .fetch();
     }
 
@@ -115,9 +127,7 @@ public class IndexDataRepositoryImpl implements IndexDataRepositoryCustom {
     }
 
     private BooleanExpression buildCursorCondition(String cursor, Long idAfter, String sortField, String sortDirection) {
-        if (cursor == null && idAfter == null) {
-            return null;
-        }
+        if (cursor == null && idAfter == null) return null;
 
         boolean isDesc = "desc".equalsIgnoreCase(sortDirection);
         String validSortField = getValidSortField(sortField);
@@ -195,7 +205,6 @@ public class IndexDataRepositoryImpl implements IndexDataRepositoryCustom {
         };
 
         OrderSpecifier<?> secondaryOrder = indexData.id.desc();
-
         return new OrderSpecifier[]{primaryOrder, secondaryOrder};
     }
 

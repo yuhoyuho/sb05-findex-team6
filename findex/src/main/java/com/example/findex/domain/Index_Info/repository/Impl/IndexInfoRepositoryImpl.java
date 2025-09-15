@@ -1,59 +1,93 @@
 package com.example.findex.domain.Index_Info.repository.Impl;
 
 import com.example.findex.domain.Index_Info.entity.IndexInfo;
-import com.example.findex.domain.Index_Info.entity.QIndexInfo;
 import com.example.findex.domain.Index_Info.repository.IndexInfoRepositoryCustom;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.dsl.ComparablePath;
+import com.querydsl.core.types.dsl.NumberPath;
 import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Iterator;
+import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
 public class IndexInfoRepositoryImpl implements IndexInfoRepositoryCustom {
 
-  private final JPAQueryFactory queryFactory;
+    private final JPAQueryFactory queryFactory;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-  @Override
-  public List<IndexInfo> findByCursorAndFilter(Long cursor, int size, String sortField,
-      String sortDirection, String indexClassification, String indexName, Boolean favorite) {
+    @Override
+    public List<IndexInfo> findByCursorAndFilter(
+            String cursor, int size,
+            String sortField, String sortDirection,
+            String indexClassification, String indexName, Boolean favorite
+    ) {
+        PathBuilder<IndexInfo> root = new PathBuilder<>(IndexInfo.class, "indexInfo");
+        ComparablePath<String> sf = root.getComparable(sortField, String.class);
+        NumberPath<Long> id = root.getNumber("id", Long.class);
 
-    QIndexInfo indexInfo = QIndexInfo.indexInfo;
-    BooleanBuilder builder = new BooleanBuilder();
+        BooleanBuilder where = new BooleanBuilder();
+        if (indexClassification != null)
+            where.and(root.getString("indexClassification").like("%" + indexClassification + "%"));
+        if (indexName != null)
+            where.and(root.getString("indexName").like("%" + indexName + "%"));
+        if (favorite != null)
+            where.and(root.getBoolean("favorite").eq(favorite));
 
-    if (cursor != null) {
-      builder.and(indexInfo.id.gt(cursor));
+        if (cursor != null) {
+            DecodedCursor decoded = decodeCursor(cursor);
+            ComparablePath<String> cursorField = root.getComparable(decoded.sortField, String.class);
+
+            if ("asc".equalsIgnoreCase(sortDirection)) {
+                where.and(cursorField.gt(decoded.sortValue)
+                        .or(cursorField.eq(decoded.sortValue).and(id.gt(decoded.id))));
+            } else {
+                where.and(cursorField.lt(decoded.sortValue)
+                        .or(cursorField.eq(decoded.sortValue).and(id.lt(decoded.id))));
+            }
+        }
+
+        Order order = "asc".equalsIgnoreCase(sortDirection) ? Order.ASC : Order.DESC;
+
+        return queryFactory.selectFrom(root)
+                .where(where)
+                .orderBy(new OrderSpecifier<>(order, sf), new OrderSpecifier<>(order, id))
+                .limit(size + 1)
+                .fetch();
     }
 
-    if (indexClassification != null && !indexClassification.isBlank()) {
-      builder.and(indexInfo.indexClassification.containsIgnoreCase(indexClassification));
+    private DecodedCursor decodeCursor(String encoded) {
+        try {
+            String json = new String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_8);
+            JsonNode node = objectMapper.readTree(json);
+            Long id = node.get("id").asLong();
+
+            String sortField = null;
+            String sortValue = null;
+            Iterator<String> it = node.fieldNames();
+            while (it.hasNext()) {
+                String f = it.next();
+                if (!f.equals("id")) {
+                    sortField = f;
+                    sortValue = node.get(f).asText();
+                    break;
+                }
+            }
+            return new DecodedCursor(sortField, sortValue, id);
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid cursor format", e);
+        }
     }
 
-    if (indexName != null && !indexName.isBlank()) {
-      builder.and(indexInfo.indexName.containsIgnoreCase(indexName));
-    }
-
-    if (favorite != null) {
-      builder.and(indexInfo.favorite.eq(favorite));
-    }
-
-    // 동적 정렬
-    PathBuilder<IndexInfo> entityPath = new PathBuilder<>(IndexInfo.class, "indexInfo");
-    OrderSpecifier<?> orderSpecifier = new OrderSpecifier<>(
-        sortDirection != null && sortDirection.equalsIgnoreCase("asc") ? Order.ASC : Order.DESC,
-        entityPath.get(sortField != null ? sortField : "id", Comparable.class)
-
-    );
-
-      return queryFactory
-          .selectFrom(indexInfo)
-          .where(builder)
-          .orderBy(orderSpecifier)
-          .limit(size)
-          .fetch();
-    }
+    private record DecodedCursor(String sortField, String sortValue, Long id) {}
 }
