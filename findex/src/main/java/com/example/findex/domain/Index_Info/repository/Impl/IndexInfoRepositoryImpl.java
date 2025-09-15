@@ -37,6 +37,7 @@ public class IndexInfoRepositoryImpl implements IndexInfoRepositoryCustom {
         NumberPath<Long> id = root.getNumber("id", Long.class);
 
         BooleanBuilder where = new BooleanBuilder();
+
         if (indexClassification != null && !indexClassification.isBlank())
             where.and(root.getString("indexClassification")
                     .containsIgnoreCase(indexClassification));
