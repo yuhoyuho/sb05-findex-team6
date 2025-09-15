@@ -112,8 +112,8 @@ public class IndexInfoService {
             nextCursor = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
         }
 
-        String cls = indexClassification == null ? "" : indexClassification;
-        String name = indexName == null ? "" : indexName;
+        String cls = indexClassification == null ? "" : indexClassification.toLowerCase();
+        String name = indexName == null ? "" : indexName.toLowerCase();
 
         long totalElements;
         if (cls.isEmpty() && name.isEmpty() && favorite == null) {

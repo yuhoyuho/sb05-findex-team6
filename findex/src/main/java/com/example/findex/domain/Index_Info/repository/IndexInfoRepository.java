@@ -29,9 +29,9 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo, Long>, Ind
     @Query("""
     select count(i)
     from IndexInfo i
-    where (:cls = '' or i.indexClassification like concat('%', :cls, '%'))
-      and (:name = '' or i.indexName like concat('%', :name, '%'))
-      and (:fav is null or i.favorite = :fav)
+    where (:cls = '' or lower(i.indexClassification) like concat('%', :cls, '%'))
+          and (:name = '' or lower(i.indexName) like concat('%', :name, '%'))
+          and (:fav is null or i.favorite = :fav)
 """)
     long countByFilter(String cls, String name, Boolean fav);
 
