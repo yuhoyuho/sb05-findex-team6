@@ -117,7 +117,7 @@ public class IndexInfoService {
 
         long totalElements;
         if (cls.isEmpty() && name.isEmpty() && favorite == null) {
-            totalElements = repository.count(); // 전체
+            totalElements = repository.count();
         } else {
             totalElements = repository.countByFilter(cls, name, favorite);
         }

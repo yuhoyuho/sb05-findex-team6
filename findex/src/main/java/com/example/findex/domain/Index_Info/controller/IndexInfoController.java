@@ -44,8 +44,6 @@ public class IndexInfoController {
       @RequestParam(required = false) Boolean favorite
 
   ) {
-
-
     CursorPageResponseIndexInfoDto response =
         service.findByCursorAndFilter(cursor, size, sortField, sortDirection,indexClassification,indexName,favorite);
 
