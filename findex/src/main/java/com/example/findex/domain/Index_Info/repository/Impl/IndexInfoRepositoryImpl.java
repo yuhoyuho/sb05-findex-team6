@@ -19,6 +19,8 @@ import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
 
+import static com.example.findex.domain.Index_Info.entity.QIndexInfo.indexInfo;
+
 @Repository
 @RequiredArgsConstructor
 public class IndexInfoRepositoryImpl implements IndexInfoRepositoryCustom {
@@ -62,6 +64,7 @@ public class IndexInfoRepositoryImpl implements IndexInfoRepositoryCustom {
         Order order = "asc".equalsIgnoreCase(sortDirection) ? Order.ASC : Order.DESC;
 
         return queryFactory.selectFrom(root)
+                .leftJoin(indexInfo.autoSync).fetchJoin()
                 .where(where)
                 .orderBy(new OrderSpecifier<>(order, sf), new OrderSpecifier<>(order, id))
                 .limit(size + 1)

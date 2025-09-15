@@ -23,6 +23,9 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo, Long>, Ind
     // 정렬 조건을 Pageable로 전달받는 버전 (asc/desc 동적으로 적용 가능)
     List<IndexInfo> findByIdGreaterThan(Long id,Pageable pageable);
 
+    @Query("SELECT i FROM IndexInfo i LEFT JOIN FETCH i.autoSync")
+    List<IndexInfo> findAllWithAutoSync();
+
     @Query("""
     select count(i)
     from IndexInfo i

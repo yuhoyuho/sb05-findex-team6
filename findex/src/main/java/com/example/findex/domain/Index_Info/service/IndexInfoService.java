@@ -70,7 +70,7 @@ public class IndexInfoService {
 
   // summaries (id, classification, name)
   public List<IndexInfoSummaryDto> findSummaries() {
-    return repository.findAll().stream()
+    return repository.findAllWithAutoSync().stream()
         .map(mapper::toSummaryDto)
         .toList();
   }
