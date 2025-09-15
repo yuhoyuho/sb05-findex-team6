@@ -85,7 +85,7 @@ public class IndexDataController {
             @RequestParam(required = false) Long indexInfoId,
             @RequestParam(defaultValue = "DAILY") PeriodType periodType,
             @RequestParam(defaultValue = "10") Integer limit) {
-        List<RankedIndexPerformanceDto> responseDto = indexDataService.getRankedPerformance(indexInfoId, periodType, limit);
+        List<RankedIndexPerformanceDto> responseDto = indexDataService.getRankedPerformance2(indexInfoId, periodType, limit);
         return ResponseEntity.ok(responseDto);
     }
 

@@ -176,6 +176,8 @@ public class IndexDataService {
     }
 
     public List<RankedIndexPerformanceDto> getRankedPerformance(Long indexInfoId, PeriodType periodType, int limit) {
+        long startTime = System.currentTimeMillis();
+
         LocalDate end = indexDataRepository.findLatestBaseDate();
         if (end == null) return List.of();
         LocalDate start = calculateDate(end, periodType);
@@ -233,6 +235,10 @@ public class IndexDataService {
                     .filter(r -> r.getPerformance().getIndexInfoId().equals(indexInfoId))
                     .toList();
         }
+
+        long endTime = System.currentTimeMillis();
+        System.out.println("[PERF] getRankedPerformance took {" + (endTime - startTime) + "} ms");
+
         return ranked.stream().limit(limit).toList();
     }
 
@@ -344,6 +350,42 @@ public class IndexDataService {
             default -> entity.getId();
         };
     }
+
+    public List<RankedIndexPerformanceDto> getRankedPerformance2(Long indexInfoId, PeriodType periodType, int limit) {
+        LocalDate end = indexDataRepository.findLatestBaseDate();
+        if (end == null) return List.of();
+        LocalDate start = calculateDate(end, periodType);
+
+        long startTime = System.currentTimeMillis();
+
+        List<Object[]> rows = indexDataRepository.getRankedPerformance2Raw(indexInfoId, start, end, limit);
+
+        List<RankedIndexPerformanceDto> result = new ArrayList<>();
+        int rank = 1;
+        for (Object[] row : rows) {
+            IndexPerformanceDto perf = IndexPerformanceDto.builder()
+                    .indexInfoId(((Number) row[0]).longValue())
+                    .indexClassification((String) row[1])
+                    .indexName((String) row[2])
+                    .currentPrice((BigDecimal) row[3])
+                    .beforePrice((BigDecimal) row[4])
+                    .versus((BigDecimal) row[5])
+                    .fluctuationRate((BigDecimal) row[6])
+                    .build();
+
+            result.add(RankedIndexPerformanceDto.builder()
+                    .rank(rank++)
+                    .performance(perf)
+                    .build());
+        }
+
+        long endTime = System.currentTimeMillis();
+        System.out.println("[PERF] getRankedPerformance2 took {" + (endTime - startTime) + "} ms");
+
+        return result;
+    }
+
+
 
     private String formatNumber(BigDecimal value) {
         return value != null ? String.format("%.2f", value) : "0.00";
